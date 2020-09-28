@@ -1,0 +1,25 @@
+[package]
+name = "timezoners"
+version = "0.1.0"
+authors = ["Craig Rodger"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+relm = "^0.20.0"
+relm-derive = "^0.20.0"
+confy = "0.4.0"
+serde = { version = "1.0", features = ["derive"] }
+# gdk = "^0"
+glib = "^0"
+chrono = "0.4.18"
+chrono-tz = "0.5.3"
+
+[dependencies.gtk]
+version = "^0.9.0"
+features = ["v3_16",]
+
+[dependencies.gio]
+version = ""
+features = ["v2_44"]
