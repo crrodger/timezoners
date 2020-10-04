@@ -8,13 +8,13 @@ use glib::types::Type;
 use crate::relm::ContainerWidget;
 use crate::config::*;
 use crate::model::*;
-use crate::widgets::{Widgets, *};
+use crate::widgets::{MainWidgets, *};
 use crate::app::{Msg, MsgUpdateType};
 
 pub struct Win {
     config: Config,
     pub model: Model,
-    widgets: Widgets,
+    widgets: MainWidgets,
 }
 
 impl Update for Win {
@@ -74,9 +74,6 @@ impl Widget for Win {
         let glade_src_main = include_str!("timezoners_gui.glade");
         let builder_main = Builder::from_string(glade_src_main);
 
-        let glade_src_widg = include_str!("timezoners_tz_widget");
-
-
         //Main window
         let window: Window = builder_main.get_object("main_window").expect("Couldn't get Main Window");
         let menu_item_quit: MenuItem = builder_main.get_object("menu_item_quit").expect("Couldn't get quite menu item");
@@ -97,7 +94,7 @@ impl Widget for Win {
         window.show_all();
         // time_ctrl.show_all();
 
-        let widgets = Widgets {
+        let widgets = MainWidgets {
             tz_box,
             window,
         };
