@@ -71,17 +71,22 @@ impl Widget for Win {
             Err(_) => Config::default(),
         };
          
-        let glade_src = include_str!("timezoners_gui.glade");
-        let builder = Builder::from_string(glade_src);
+        let glade_src_main = include_str!("timezoners_gui.glade");
+        let builder_main = Builder::from_string(glade_src_main);
+
+        let glade_src_widg = include_str!("timezoners_tz_widget");
+
 
         //Main window
-        let window: Window = builder.get_object("main_window").expect("Couldn't get Main Window");
-        let menu_item_quit: MenuItem = builder.get_object("menu_item_quit").expect("Couldn't get quite menu item");
+        let window: Window = builder_main.get_object("main_window").expect("Couldn't get Main Window");
+        let menu_item_quit: MenuItem = builder_main.get_object("menu_item_quit").expect("Couldn't get quite menu item");
         // let time_ctrl: Window = builder.get_object("widget_tz_control").expect("Could not get time control window");
-        let tz_box: Box = builder.get_object("box_widgets").expect("Could not get the widgets box");
+        let tz_box: Box = builder_main.get_object("box_widgets").expect("Could not get the widgets box");
         
         let first_selector = tz_box.add_widget::<TzSelector>(());
         model.tz_ctrls.push(first_selector);
+        let second_selector = tz_box.add_widget::<TzSelector>(());
+        model.tz_ctrls.push(second_selector);
         
         // box_widgets.pack_start(&time_ctrl, true, true, 0);
         

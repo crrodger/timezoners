@@ -18,10 +18,16 @@
           <object class="GtkComboBoxText">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
+            <property name="has-entry">True</property>
             <items>
               <item translatable="yes">Item 1</item>
               <item translatable="yes">Item 2</item>
             </items>
+            <child internal-child="entry">
+              <object class="GtkEntry">
+                <property name="can-focus">False</property>
+              </object>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>

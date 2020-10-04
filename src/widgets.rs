@@ -1,5 +1,5 @@
-use gtk::{Window, Box, BoxExt, Scale, Label, WidgetExt, OrientableExt, LabelExt, ComboBoxTextExt,
-    ButtonExt, PackType, Align, Orientation, ScaleExt, Inhibit, RangeExt};
+use gtk::{Window, Box, BoxExt, Scale, Label, WidgetExt, OrientableExt, LabelExt, ComboBoxTextExt, ComboBoxTextBuilder,
+    ButtonExt, PackType, Align, Orientation, ScaleExt, Inhibit, RangeExt, WidgetExt, };
 use gtk::Orientation::{Horizontal, Vertical};
 use relm::{Widget};
 use relm_derive::{widget};
@@ -35,6 +35,7 @@ impl Widget for TzSelector {
         self.time_scale.set_range(0.0,96.0);
         self.time_scale.set_increments(1.0,4.0);
         
+        self.cmb_tz_name.set_property_width_requested(50);
         for tz_name in TZ_VARIANTS.iter() {
             println!("Item {}", tz_name.name());
             self.cmb_tz_name.append_text(&tz_name.name());
