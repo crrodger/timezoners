@@ -52,6 +52,15 @@ impl Update for Win {
                 // self.save_config();
                 gtk::main_quit();
             },
+            //Messages from child components
+            TimezoneSelectChanged(new_zone) => {
+                println!("TimezoneUpdated");
+                self.model.tz_ctrls[1].emit(crate::widgets::Msg::BaseTimezoneChanged(format!("{}", new_zone)));
+            },
+            //Messages to child componenets
+            ChangeBaseTimezone => {
+
+            },
         }
     }
 }
@@ -66,6 +75,7 @@ impl Widget for Win {
     }
 
     fn view(relm: &Relm<Self>, mut model: Self::Model) -> Self {
+        
         let config: Config = match confy::load("timezoners_gui.glade") {
             Ok(x) =>  x,
             Err(_) => Config::default(),
@@ -81,18 +91,21 @@ impl Widget for Win {
         let tz_box: Box = builder_main.get_object("box_widgets").expect("Could not get the widgets box");
         
         let first_selector = tz_box.add_widget::<TzSelector>(());
-        model.tz_ctrls.push(first_selector);
+        connect!(first_selector@crate::widgets::Msg::TimezoneSelectChanged(ref new_zone), relm, Msg::TimezoneSelectChanged(new_zone.clone()));
         let second_selector = tz_box.add_widget::<TzSelector>(());
+        // connect!(second_selector@crate::widgets::Msg::TimezoneSelectChanged, relm, Msg::TimezoneSelectChanged);
+        
+        model.tz_ctrls.push(first_selector);
         model.tz_ctrls.push(second_selector);
         
-        // box_widgets.pack_start(&time_ctrl, true, true, 0);
         
         connect!(relm, window, connect_delete_event(_, _), return (Some(Msg::Quit), Inhibit(false)));
         // connect!(relm, window, connect_show(_), Msg::SetupTree);
         connect!(relm, menu_item_quit, connect_activate(_), Msg::Quit);
         
+
         window.show_all();
-        // time_ctrl.show_all();
+        
 
         let widgets = MainWidgets {
             tz_box,
@@ -105,10 +118,15 @@ impl Widget for Win {
             widgets,
         }
     }
+
     fn init_view(&mut self) {
+        
     }
+
     fn on_add<W: IsA<gtk::Widget> + IsA<glib::Object>>(&self, _parent: W) {
+
     }
+
     fn parent_id() -> Option<&'static str> {
         None
     }

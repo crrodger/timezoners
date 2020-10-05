@@ -1,11 +1,12 @@
-use gtk::{Align, Box, BoxExt, ButtonExt, ComboBoxText, ComboBoxTextBuilder, ComboBoxTextExt, Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, WidgetExt, Window};
-use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::BuilderExtManual};
-use relm::{Update, Widget, Relm};
+use gtk::{Align, Box, BoxExt, ButtonExt, ComboBoxText, ComboBoxTextBuilder, ComboBoxTextExt, ComboBoxExt,  Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, WidgetExt, Window};
+use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::BuilderExtManual, Adjustment};
+use relm::{Update, Widget, Relm, EventStream};
 use relm_derive::{widget};
 use chrono::{TimeZone, Utc};
 use chrono_tz::{TZ_VARIANTS, Tz};
+use crate::{win};
 
-use self::TzMsg::*;
+use self::Msg::*;
 
 #[derive(Clone)]
 pub struct MainWidgets {
@@ -14,11 +15,15 @@ pub struct MainWidgets {
 }
 
 #[derive(Clone, Msg)]
-pub enum TzMsg {
-    TimeChange,
+pub enum Msg {
+    TimezoneSelect,
+    TimezoneSelectChanged(String),
+    TimeChange(f64),
+    BaseTimezoneChanged(String),
 }
 pub struct TzSelectorModel {
-    utc_time: usize,
+    base_timezone: Option<String>,
+    local_relm: Relm<TzSelector>,
 }
 
 pub struct TzSelectorWidgets {
@@ -27,6 +32,7 @@ pub struct TzSelectorWidgets {
     pub lbl_end: Label,
     pub slider: Scale,
     pub cmb_tz_name: ComboBoxText,
+    pub tz_scale_adj: Adjustment,
 }
 
 
@@ -37,6 +43,61 @@ pub struct TzSelector {
 
 impl TzSelector {
 
+    fn updateTimeLabels(&self) {
+        match &self.model.base_timezone {
+            Some(base_zone) => {
+                
+            },
+            None => {
+
+            },
+            
+        }
+
+    }
+
+    fn set_notification_channel() {
+
+    }
+
+}
+
+impl Update for TzSelector {
+    
+    type Model = TzSelectorModel;
+    type ModelParam = ();
+    type Msg = Msg;
+    
+    fn update(&mut self, event: Msg) {
+        match event {
+            TimezoneSelect => {
+                let tz_string = format!("{}", self.widgets.cmb_tz_name.get_active_text().unwrap());
+                self.updateTimeLabels();
+                //Caught by parent win update loop
+                self.model.local_relm.stream().emit(Msg::TimezoneSelectChanged(tz_string));
+            },
+            TimezoneSelectChanged(_new_zone) => {
+                // Dummy, message is intercepted at win but have to complete match arms here
+            },
+            TimeChange(value) => {
+                println!("Value {}", value);
+            },
+            BaseTimezoneChanged(new_zone) => {
+                println!("Base tz change to {}", new_zone);
+                self.model.base_timezone = Some(new_zone);
+                self.updateTimeLabels();
+            }
+        }
+    }
+
+    fn model(relm: &relm::Relm<Self>, param: Self::ModelParam) -> Self::Model {
+        let local_relm = relm.clone();
+        let base_timezone = None;
+        TzSelectorModel {
+            base_timezone,
+            local_relm,
+        }
+    }
 }
 
 impl Widget for TzSelector {
@@ -56,9 +117,14 @@ impl Widget for TzSelector {
         let lbl_start: Label = builder_widget.get_object("tz_label_start").expect("Could not get tz_label_start");
         let lbl_end: Label = builder_widget.get_object("tz_label_end").expect("Could not get tz_label_end");
         let slider: Scale = builder_widget.get_object("tz_scale_select").expect("Could not get tz_scale_select");
-        let cmb_tz_name = builder_widget.get_object("cmb_tz_name").expect("Could not get cmb_tz_name");
+        let cmb_tz_name: ComboBoxText = builder_widget.get_object("cmb_tz_name").expect("Could not get cmb_tz_name");
+        let tz_scale_adj: Adjustment = builder_widget.get_object("tz_scale_adj").expect("Could not get tz_scale_adj");
 
+        connect!(relm, cmb_tz_name, connect_changed(_), Msg::TimezoneSelect);
+        connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::TimeChange(val)), Inhibit(false)));
+        
         box_root.unparent();
+        slider.set_adjustment(&tz_scale_adj);
 
         let widgets  = TzSelectorWidgets {
             box_root,
@@ -66,6 +132,7 @@ impl Widget for TzSelector {
             lbl_end,
             slider,
             cmb_tz_name,
+            tz_scale_adj,
         };
 
         TzSelector {
@@ -77,7 +144,7 @@ impl Widget for TzSelector {
     fn init_view(&mut self) {
         
         for tz_name in TZ_VARIANTS.iter() {
-            println!("Item {}", tz_name.name());
+            // println!("Item {}", tz_name.name());
             self.widgets.cmb_tz_name.append_text(&tz_name.name());
         }
 
@@ -86,21 +153,3 @@ impl Widget for TzSelector {
     
 }
 
-impl Update for TzSelector {
-    
-    type Model = TzSelectorModel;
-    type ModelParam = ();
-    type Msg = TzMsg;
-    
-    fn update(&mut self, event: TzMsg) {
-        match event {
-            TimeChange => println!("Message"),
-        }
-    }
-
-    fn model(relm: &relm::Relm<Self>, param: Self::ModelParam) -> Self::Model {
-        TzSelectorModel {
-            utc_time: 0,
-        }
-    }
-}

@@ -15,6 +15,10 @@ pub enum MsgUpdateType {
 pub enum Msg {
     ProcessUpdateMsg((MsgUpdateType, String)),
     Quit,
+    //Messages from child widgets
+    TimezoneSelectChanged(String),
+    //Messages to child widgets
+    ChangeBaseTimezone,
 }
 
 pub struct App;
