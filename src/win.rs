@@ -54,8 +54,10 @@ impl Update for Win {
             },
             //Messages from child components
             TimezoneSelectChanged(new_zone) => {
-                println!("TimezoneUpdated");
                 self.model.tz_ctrls[1].emit(crate::widgets::Msg::BaseTimezoneChanged(format!("{}", new_zone)));
+            },
+            TimeSelectChanged(new_time) => {
+                self.model.tz_ctrls[1].emit(crate::widgets::Msg::BaseTimeSelectChanged(new_time));
             },
             //Messages to child componenets
             ChangeBaseTimezone => {
@@ -92,7 +94,9 @@ impl Widget for Win {
         
         let first_selector = tz_box.add_widget::<TzSelector>(());
         connect!(first_selector@crate::widgets::Msg::TimezoneSelectChanged(ref new_zone), relm, Msg::TimezoneSelectChanged(new_zone.clone()));
+        connect!(first_selector@crate::widgets::Msg::TimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
         let second_selector = tz_box.add_widget::<TzSelector>(());
+        
         // connect!(second_selector@crate::widgets::Msg::TimezoneSelectChanged, relm, Msg::TimezoneSelectChanged);
         
         model.tz_ctrls.push(first_selector);

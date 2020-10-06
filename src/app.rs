@@ -17,6 +17,7 @@ pub enum Msg {
     Quit,
     //Messages from child widgets
     TimezoneSelectChanged(String),
+    TimeSelectChanged(f64),
     //Messages to child widgets
     ChangeBaseTimezone,
 }

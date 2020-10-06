@@ -2,7 +2,7 @@ use gtk::{Align, Box, BoxExt, ButtonExt, ComboBoxText, ComboBoxTextBuilder, Comb
 use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::BuilderExtManual, Adjustment};
 use relm::{Update, Widget, Relm, EventStream};
 use relm_derive::{widget};
-use chrono::{TimeZone, Utc};
+use chrono::{TimeZone, Utc, NaiveDate, Local, Datelike};
 use chrono_tz::{TZ_VARIANTS, Tz};
 use crate::{win};
 
@@ -18,11 +18,14 @@ pub struct MainWidgets {
 pub enum Msg {
     TimezoneSelect,
     TimezoneSelectChanged(String),
-    TimeChange(f64),
+    TimeSelect(f64),
+    TimeSelectChanged(f64),
+    BaseTimeSelectChanged(f64),
     BaseTimezoneChanged(String),
 }
 pub struct TzSelectorModel {
     base_timezone: Option<String>,
+    this_timezone: Option<String>,
     local_relm: Relm<TzSelector>,
 }
 
@@ -46,7 +49,29 @@ impl TzSelector {
     fn updateTimeLabels(&self) {
         match &self.model.base_timezone {
             Some(base_zone) => {
+                let local_now = Local::now();
+                let base_start_time = NaiveDate::from_ymd(local_now.date().year(), local_now.month(), local_now.day()).and_hms(0, 0, 0);
+                let base_end_time = NaiveDate::from_ymd(local_now.date().year(), local_now.month(), local_now.day()).and_hms(23, 59, 59);
                 
+                let tz_base: Tz = base_zone.parse().unwrap();
+                let base_start_time_tz = tz_base.from_local_datetime(&base_start_time).unwrap();
+                let base_end_time_tz = tz_base.from_local_datetime(&base_end_time).unwrap();
+
+                let tz_curr: Tz;
+                if let Some(tz) = self.model.this_timezone.clone() {
+                    tz_curr = tz.parse().unwrap();
+                } else {
+                    return;
+                }
+                let curr_start_time_tz = base_start_time_tz.with_timezone(&tz_curr);
+                let curr_end_time_tz = base_end_time_tz.with_timezone(&tz_curr);
+
+
+                println!("Now is {} tz_base is {} tz_curr is {}",local_now, base_start_time_tz, curr_start_time_tz);
+
+                self.widgets.lbl_start.set_text(format!("{}", curr_start_time_tz.format("%I:%M %P")).as_ref());
+                self.widgets.lbl_end.set_text(format!("{}", curr_end_time_tz.format("%I:%M %P")).as_ref());
+
             },
             None => {
 
@@ -72,6 +97,7 @@ impl Update for TzSelector {
         match event {
             TimezoneSelect => {
                 let tz_string = format!("{}", self.widgets.cmb_tz_name.get_active_text().unwrap());
+                self.model.this_timezone = Some(tz_string.clone());
                 self.updateTimeLabels();
                 //Caught by parent win update loop
                 self.model.local_relm.stream().emit(Msg::TimezoneSelectChanged(tz_string));
@@ -79,22 +105,31 @@ impl Update for TzSelector {
             TimezoneSelectChanged(_new_zone) => {
                 // Dummy, message is intercepted at win but have to complete match arms here
             },
-            TimeChange(value) => {
-                println!("Value {}", value);
+            TimeSelect(value) => {
+                // println!("Value {}", value);
+                self.model.local_relm.stream().emit(Msg::TimeSelectChanged(value));
+            },
+            TimeSelectChanged(_new_value) => {
+                // Dummy, message is intercepted at win but have to complete match arms here
             },
             BaseTimezoneChanged(new_zone) => {
                 println!("Base tz change to {}", new_zone);
                 self.model.base_timezone = Some(new_zone);
                 self.updateTimeLabels();
-            }
+            },
+            BaseTimeSelectChanged(new_time) => {
+                self.widgets.slider.set_value(new_time);
+            },
         }
     }
 
     fn model(relm: &relm::Relm<Self>, param: Self::ModelParam) -> Self::Model {
         let local_relm = relm.clone();
         let base_timezone = None;
+        let this_timezone = None;
         TzSelectorModel {
             base_timezone,
+            this_timezone,
             local_relm,
         }
     }
@@ -121,7 +156,7 @@ impl Widget for TzSelector {
         let tz_scale_adj: Adjustment = builder_widget.get_object("tz_scale_adj").expect("Could not get tz_scale_adj");
 
         connect!(relm, cmb_tz_name, connect_changed(_), Msg::TimezoneSelect);
-        connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::TimeChange(val)), Inhibit(false)));
+        connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::TimeSelect(val)), Inhibit(false)));
         
         box_root.unparent();
         slider.set_adjustment(&tz_scale_adj);
