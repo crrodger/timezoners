@@ -1,5 +1,7 @@
-use gtk::{Align, Box, BoxExt, ButtonExt, ComboBoxText, ComboBoxTextBuilder, ComboBoxTextExt, ComboBoxExt,  Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, WidgetExt, Window, Entry};
-use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::BuilderExtManual, Adjustment, SearchEntry, SearchEntryExt, EntryExt};
+use glib::{ToValue, Type};
+use gtk::{Align, Box, BoxExt, ButtonExt, ComboBox, ComboBoxExt, ComboBoxTextBuilder, Entry, Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, TreeModelExt, WidgetExt, Window};
+use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, 
+            SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt};
 use relm::{Update, Widget, Relm, EventStream};
 use relm_derive::{widget};
 use chrono::{TimeZone, Utc, NaiveDate, NaiveTime, Local, Datelike, Duration};
@@ -16,6 +18,7 @@ pub struct MainWidgets {
 
 #[derive(Clone, Msg)]
 pub enum Msg {
+    SetupModel,
     SearchContentsChange,
     LocalTimezoneSelect,
     NotifyParentTimezoneSelectChanged(String),
@@ -28,6 +31,8 @@ pub struct TzSelectorModel {
     base_timezone: Option<String>,
     this_timezone: Option<String>,
     local_relm: Relm<TzSelector>,
+    pub liststore: ListStore,
+    pub liststorefilter: TreeModelFilter,
 }
 
 pub struct TzSelectorWidgets {
@@ -35,10 +40,10 @@ pub struct TzSelectorWidgets {
     pub lbl_start: Label,
     pub lbl_end: Label,
     pub slider: Scale,
-    pub cmb_tz_name: ComboBoxText,
+    pub cmb_tz_name: ComboBox,
     pub tz_scale_adj: Adjustment,
     pub lbl_current_select_time: Label,
-    pub txt_search_tz: Entry,
+    pub txt_search_tz: SearchEntry,
 }
 
 
@@ -89,6 +94,46 @@ impl TzSelector {
         let display_value = get_time_string_from_index(slider_value, self.widgets.lbl_start.get_text().as_str());
         self.widgets.lbl_current_select_time.set_text(&display_value);
     }
+
+    fn setup_model(&self) {
+        let new_cell = CellRendererTextBuilder::new();
+        let cell = new_cell.build();
+        self.widgets.cmb_tz_name.pack_start(&cell, true);
+        self.widgets.cmb_tz_name.add_attribute(&cell, "text", 0);
+        self.widgets.cmb_tz_name.set_id_column(0);
+        
+    }
+
+    fn add_timezone_strings(&self) {
+        for tz_name in TZ_VARIANTS.iter() {
+            // println!("Item {}", tz_name.name());
+            self.add_data_row(&tz_name.name(), &tz_name.name());
+        }
+    }
+
+    fn add_data_row(&self, col1: &str, col2: &str) {
+        let row = self.model.liststore.append();
+
+        self.model.liststore.set_value(&row, 0, &col1.to_value());
+        // self.model.liststore.set_value(&row, 1, &col2.to_value());
+    }
+
+    fn add_text_column(&self, title: &str, column: i32) {
+        let mut new_column = TreeViewColumnBuilder::new();
+        new_column = new_column.resizable(true);
+        new_column = new_column.reorderable(true);
+        new_column = new_column.title(title);
+
+        let new_cell = CellRendererTextBuilder::new();
+        
+        // let view_column = TreeViewColumn::new();
+        let view_column = new_column.build();
+        let cell = new_cell.build();
+        view_column.pack_start(&cell, true);
+        view_column.add_attribute(&cell, "text", column);
+        self.widgets.cmb_tz_name.set_id_column(0);
+    }
+    
 }
 
 fn get_time_string_from_index(value: f64, start_time: &str) ->String {
@@ -107,12 +152,25 @@ impl Update for TzSelector {
     
     fn update(&mut self, event: Msg) {
         match event {
+            SetupModel => {
+                self.setup_model();
+                self.add_timezone_strings();
+            },
             SearchContentsChange => {
-                let search_string = self.widgets.txt_search_tz.get_text().as_str();
-                let tz_data = self.widgets.cmb_tz_name.get_model().unwrap();
+                if self.widgets.txt_search_tz.get_text_length() >= 3 {
+                    self.model.liststorefilter.refilter();
+                    self.widgets.cmb_tz_name.popup();
+                }
+                
             },
             LocalTimezoneSelect => {
-                let tz_string = format!("{}", self.widgets.cmb_tz_name.get_active_text().unwrap());
+                let tz_string: String;
+                if let Some(sel_str) = self.widgets.cmb_tz_name.get_active_id() {
+                    tz_string = String::from(sel_str.as_str());
+                } else {
+                    return;
+                }
+                // let tz_string = format!("{}", self.widgets.cmb_tz_name.get_active_id().unwrap());
                 self.model.this_timezone = Some(tz_string.clone());
                 self.updateTimeLabels();
                 //Caught by parent win update loop
@@ -146,10 +204,18 @@ impl Update for TzSelector {
         let local_relm = relm.clone();
         let base_timezone = None;
         let this_timezone = None;
+        let liststore = ListStore::new(&[
+            Type::String,
+        ]);
+        
+        let liststorefilter = TreeModelFilter::new(&liststore, None); //Probably need a TreePath for a tree not a list like I am using here
+
         TzSelectorModel {
             base_timezone,
             this_timezone,
             local_relm,
+            liststore,
+            liststorefilter,
         }
     }
 }
@@ -171,7 +237,7 @@ impl Widget for TzSelector {
         let lbl_start: Label = builder_widget.get_object("tz_label_start").expect("Could not get tz_label_start");
         let lbl_end: Label = builder_widget.get_object("tz_label_end").expect("Could not get tz_label_end");
         let slider: Scale = builder_widget.get_object("tz_scale_select").expect("Could not get tz_scale_select");
-        let cmb_tz_name: ComboBoxText = builder_widget.get_object("cmb_tz_name").expect("Could not get cmb_tz_name");
+        let cmb_tz_name: ComboBox = builder_widget.get_object("cmb_tz_name").expect("Could not get cmb_tz_name");
         let tz_scale_adj: Adjustment = builder_widget.get_object("tz_scale_adj").expect("Could not get tz_scale_adj");
         let lbl_current_select_time: Label = builder_widget.get_object("lbl_current_select_time").expect("Could not get lbl_current_select_time");
         let txt_search_tz: SearchEntry = builder_widget.get_object("txt_search_tz").expect("Could not get txt_search_tz");
@@ -179,7 +245,31 @@ impl Widget for TzSelector {
         connect!(relm, cmb_tz_name, connect_changed(_), Msg::LocalTimezoneSelect);
         connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::LocalTimeSelect(val)), Inhibit(false)));
         connect!(relm, txt_search_tz, connect_search_changed(_), Msg::SearchContentsChange);
+        relm.stream().emit(Msg::SetupModel);
         
+        cmb_tz_name.set_model(Some(&model.liststorefilter));
+
+        let clone_search = txt_search_tz.clone();
+        model.liststorefilter.set_visible_func(move |tm: &TreeModel, ti: &TreeIter| {
+            if clone_search.get_text_length() > 0 {
+                
+                let match_chars = clone_search.get_text();
+
+                match tm.get_value(ti, 0).get::<String>().unwrap() {
+                    Some(str_col_value) => {
+                        if str_col_value.contains(match_chars.as_str()) {
+                                return true;
+                            } else {
+                                return false;
+                            }
+                    },
+                    None => return true
+                }
+            } else {
+                true
+            }
+        });
+
         //The component is loaded inside of a window, need to remove this link
         box_root.unparent();
         slider.set_adjustment(&tz_scale_adj);
@@ -203,13 +293,7 @@ impl Widget for TzSelector {
 
     fn init_view(&mut self) {
         
-        for tz_name in TZ_VARIANTS.iter() {
-            // println!("Item {}", tz_name.name());
-            self.widgets.cmb_tz_name.append_text(&tz_name.name());
-        }
-
     }
-
     
 }
 
