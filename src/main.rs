@@ -6,6 +6,7 @@ extern crate relm;
 extern crate relm_derive;
 extern crate chrono;
 extern crate chrono_tz;
+extern crate gdk;
 
 use crate::app::App;
 

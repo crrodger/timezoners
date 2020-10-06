@@ -2,105 +2,6 @@
 <!-- Generated with glade 3.39.0 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
-  <template class="__glade_unnamed_23" parent="GtkBin">
-    <property name="visible">True</property>
-    <property name="can-focus">False</property>
-    <child>
-      <object class="GtkBox" id="box_widget_main">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="orientation">vertical</property>
-        <child>
-          <object class="GtkComboBoxText" id="cmb_tz_name">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <property name="has-entry">True</property>
-            <child internal-child="entry">
-              <object class="GtkEntry">
-                <property name="can-focus">True</property>
-              </object>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkBox">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <child>
-              <object class="GtkBox">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="vexpand">True</property>
-                <property name="orientation">vertical</property>
-                <child>
-                  <object class="GtkLabel" id="tz_label_start">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="valign">start</property>
-                    <property name="vexpand">True</property>
-                    <property name="label" translatable="yes">12:00 am</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkLabel" id="tz_label_end">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="valign">end</property>
-                    <property name="vexpand">True</property>
-                    <property name="label" translatable="yes">11:59 pm</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">2</property>
-                  </packing>
-                </child>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkScale" id="tz_scale_select">
-                <property name="width-request">40</property>
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="orientation">vertical</property>
-                <property name="adjustment">adjustment1</property>
-                <property name="lower-stepper-sensitivity">on</property>
-                <property name="upper-stepper-sensitivity">on</property>
-                <property name="fill-level">0.00000000022351741812</property>
-                <property name="digits">0</property>
-                <property name="draw-value">False</property>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">True</property>
-            <property name="fill">True</property>
-            <property name="position">1</property>
-          </packing>
-        </child>
-      </object>
-    </child>
-  </template>
   <object class="GtkApplicationWindow" id="main_window">
     <property name="can-focus">False</property>
     <property name="default-width">800</property>
@@ -110,6 +11,7 @@
         <property name="visible">True</property>
         <property name="can-focus">False</property>
         <property name="orientation">vertical</property>
+        <property name="baseline-position">top</property>
         <child>
           <object class="GtkMenuBar">
             <property name="visible">True</property>
@@ -280,29 +182,19 @@
           </packing>
         </child>
         <child>
-          <object class="GtkFrame">
+          <object class="GtkBox" id="box_widgets">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
-            <property name="hexpand">True</property>
-            <property name="vexpand">True</property>
-            <property name="label-xalign">0</property>
-            <property name="shadow-type">none</property>
+            <property name="orientation">vertical</property>
+            <property name="homogeneous">True</property>
+            <property name="baseline-position">top</property>
             <child>
-              <object class="GtkBox" id="box_widgets">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-              </object>
+              <placeholder/>
             </child>
-            <child type="label_item">
+            <child>
+              <placeholder/>
+            </child>
+            <child>
               <placeholder/>
             </child>
           </object>

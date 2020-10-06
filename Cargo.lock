@@ -907,6 +907,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "confy",
+ "gdk",
  "gio",
  "glib",
  "gtk",

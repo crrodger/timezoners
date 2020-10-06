@@ -1,8 +1,10 @@
 use glib::{ToValue, Type};
 use gtk::{Align, Box, BoxExt, ButtonExt, ComboBox, ComboBoxExt, ComboBoxTextBuilder, Entry, Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, TreeModelExt, WidgetExt, Window};
 use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, 
-            SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt};
+            SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
+            CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt};
 use relm::{Update, Widget, Relm, EventStream};
+use gdk::{EventKey};
 use relm_derive::{widget};
 use chrono::{TimeZone, Utc, NaiveDate, NaiveTime, Local, Datelike, Duration};
 use chrono_tz::{TZ_VARIANTS, Tz};
@@ -20,6 +22,7 @@ pub struct MainWidgets {
 pub enum Msg {
     SetupModel,
     SearchContentsChange,
+    SearchKeyReleased(EventKey),
     LocalTimezoneSelect,
     NotifyParentTimezoneSelectChanged(String),
     LocalTimeSelect(f64),
@@ -159,9 +162,15 @@ impl Update for TzSelector {
             SearchContentsChange => {
                 if self.widgets.txt_search_tz.get_text_length() >= 3 {
                     self.model.liststorefilter.refilter();
-                    self.widgets.cmb_tz_name.popup();
                 }
                 
+            },
+            SearchKeyReleased(key) => {
+                if let Some(key_name) = key.get_keyval().name() {
+                    if key_name.as_str() == "Return" {
+                        self.widgets.cmb_tz_name.popup();
+                    }
+                }
             },
             LocalTimezoneSelect => {
                 let tz_string: String;
@@ -173,6 +182,7 @@ impl Update for TzSelector {
                 // let tz_string = format!("{}", self.widgets.cmb_tz_name.get_active_id().unwrap());
                 self.model.this_timezone = Some(tz_string.clone());
                 self.updateTimeLabels();
+                self.update_time_display();
                 //Caught by parent win update loop
                 self.model.local_relm.stream().emit(Msg::NotifyParentTimezoneSelectChanged(tz_string));
             },
@@ -245,6 +255,7 @@ impl Widget for TzSelector {
         connect!(relm, cmb_tz_name, connect_changed(_), Msg::LocalTimezoneSelect);
         connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::LocalTimeSelect(val)), Inhibit(false)));
         connect!(relm, txt_search_tz, connect_search_changed(_), Msg::SearchContentsChange);
+        connect!(relm, txt_search_tz, connect_key_release_event(_, key), return (Msg::SearchKeyReleased(key.clone()), Inhibit(false)));
         relm.stream().emit(Msg::SetupModel);
         
         cmb_tz_name.set_model(Some(&model.liststorefilter));
