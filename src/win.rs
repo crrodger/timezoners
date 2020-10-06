@@ -54,10 +54,10 @@ impl Update for Win {
             },
             //Messages from child components
             TimezoneSelectChanged(new_zone) => {
-                self.model.tz_ctrls[1].emit(crate::widgets::Msg::BaseTimezoneChanged(format!("{}", new_zone)));
+                self.model.tz_ctrls[1].emit(crate::widgets::Msg::FromParentBaseTimezoneChanged(format!("{}", new_zone)));
             },
             TimeSelectChanged(new_time) => {
-                self.model.tz_ctrls[1].emit(crate::widgets::Msg::BaseTimeSelectChanged(new_time));
+                self.model.tz_ctrls[1].emit(crate::widgets::Msg::FromParentBaseTimeSelectChanged(new_time));
             },
             //Messages to child componenets
             ChangeBaseTimezone => {
@@ -93,8 +93,8 @@ impl Widget for Win {
         let tz_box: Box = builder_main.get_object("box_widgets").expect("Could not get the widgets box");
         
         let first_selector = tz_box.add_widget::<TzSelector>(());
-        connect!(first_selector@crate::widgets::Msg::TimezoneSelectChanged(ref new_zone), relm, Msg::TimezoneSelectChanged(new_zone.clone()));
-        connect!(first_selector@crate::widgets::Msg::TimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
+        connect!(first_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(ref new_zone), relm, Msg::TimezoneSelectChanged(new_zone.clone()));
+        connect!(first_selector@crate::widgets::Msg::NotifyParentTimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
         let second_selector = tz_box.add_widget::<TzSelector>(());
         
         // connect!(second_selector@crate::widgets::Msg::TimezoneSelectChanged, relm, Msg::TimezoneSelectChanged);

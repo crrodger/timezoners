@@ -1,8 +1,8 @@
-use gtk::{Align, Box, BoxExt, ButtonExt, ComboBoxText, ComboBoxTextBuilder, ComboBoxTextExt, ComboBoxExt,  Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, WidgetExt, Window};
-use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::BuilderExtManual, Adjustment};
+use gtk::{Align, Box, BoxExt, ButtonExt, ComboBoxText, ComboBoxTextBuilder, ComboBoxTextExt, ComboBoxExt,  Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, WidgetExt, Window, Entry};
+use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::BuilderExtManual, Adjustment, SearchEntry, SearchEntryExt, EntryExt};
 use relm::{Update, Widget, Relm, EventStream};
 use relm_derive::{widget};
-use chrono::{TimeZone, Utc, NaiveDate, Local, Datelike};
+use chrono::{TimeZone, Utc, NaiveDate, NaiveTime, Local, Datelike, Duration};
 use chrono_tz::{TZ_VARIANTS, Tz};
 use crate::{win};
 
@@ -16,12 +16,13 @@ pub struct MainWidgets {
 
 #[derive(Clone, Msg)]
 pub enum Msg {
-    TimezoneSelect,
-    TimezoneSelectChanged(String),
-    TimeSelect(f64),
-    TimeSelectChanged(f64),
-    BaseTimeSelectChanged(f64),
-    BaseTimezoneChanged(String),
+    SearchContentsChange,
+    LocalTimezoneSelect,
+    NotifyParentTimezoneSelectChanged(String),
+    LocalTimeSelect(f64),
+    NotifyParentTimeSelectChanged(f64),
+    FromParentBaseTimeSelectChanged(f64),
+    FromParentBaseTimezoneChanged(String),
 }
 pub struct TzSelectorModel {
     base_timezone: Option<String>,
@@ -36,6 +37,8 @@ pub struct TzSelectorWidgets {
     pub slider: Scale,
     pub cmb_tz_name: ComboBoxText,
     pub tz_scale_adj: Adjustment,
+    pub lbl_current_select_time: Label,
+    pub txt_search_tz: Entry,
 }
 
 
@@ -61,6 +64,7 @@ impl TzSelector {
                 if let Some(tz) = self.model.this_timezone.clone() {
                     tz_curr = tz.parse().unwrap();
                 } else {
+                    //If no timezone is selected for current control do nothing
                     return;
                 }
                 let curr_start_time_tz = base_start_time_tz.with_timezone(&tz_curr);
@@ -78,13 +82,21 @@ impl TzSelector {
             },
             
         }
-
     }
 
-    fn set_notification_channel() {
-
+    fn update_time_display(&self) {
+        let slider_value = self.widgets.slider.get_value();
+        let display_value = get_time_string_from_index(slider_value, self.widgets.lbl_start.get_text().as_str());
+        self.widgets.lbl_current_select_time.set_text(&display_value);
     }
+}
 
+fn get_time_string_from_index(value: f64, start_time: &str) ->String {
+    let starting_time: NaiveTime = NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap();
+    let offset_dur: Duration = Duration::minutes(value as i64 * 15);
+    let calc_time = starting_time + offset_dur;
+    let ret_string = String::from(format!("{}", calc_time.format("%I:%M %P")));
+    return ret_string;
 }
 
 impl Update for TzSelector {
@@ -95,30 +107,37 @@ impl Update for TzSelector {
     
     fn update(&mut self, event: Msg) {
         match event {
-            TimezoneSelect => {
+            SearchContentsChange => {
+                let search_string = self.widgets.txt_search_tz.get_text().as_str();
+                let tz_data = self.widgets.cmb_tz_name.get_model().unwrap();
+            },
+            LocalTimezoneSelect => {
                 let tz_string = format!("{}", self.widgets.cmb_tz_name.get_active_text().unwrap());
                 self.model.this_timezone = Some(tz_string.clone());
                 self.updateTimeLabels();
                 //Caught by parent win update loop
-                self.model.local_relm.stream().emit(Msg::TimezoneSelectChanged(tz_string));
+                self.model.local_relm.stream().emit(Msg::NotifyParentTimezoneSelectChanged(tz_string));
             },
-            TimezoneSelectChanged(_new_zone) => {
-                // Dummy, message is intercepted at win but have to complete match arms here
-            },
-            TimeSelect(value) => {
+            LocalTimeSelect(value) => {
                 // println!("Value {}", value);
-                self.model.local_relm.stream().emit(Msg::TimeSelectChanged(value));
+                self.model.local_relm.stream().emit(Msg::NotifyParentTimeSelectChanged(value));
+                self.update_time_display();
             },
-            TimeSelectChanged(_new_value) => {
+            NotifyParentTimezoneSelectChanged(_new_zone) => {
                 // Dummy, message is intercepted at win but have to complete match arms here
             },
-            BaseTimezoneChanged(new_zone) => {
+            NotifyParentTimeSelectChanged(_new_value) => {
+                // Dummy, message is intercepted at win but have to complete match arms here
+            },
+            FromParentBaseTimezoneChanged(new_zone) => {
                 println!("Base tz change to {}", new_zone);
                 self.model.base_timezone = Some(new_zone);
                 self.updateTimeLabels();
             },
-            BaseTimeSelectChanged(new_time) => {
+            // Should only be recieved by non base timezone Tz Controls
+            FromParentBaseTimeSelectChanged(new_time) => {
                 self.widgets.slider.set_value(new_time);
+                self.update_time_display();
             },
         }
     }
@@ -154,10 +173,14 @@ impl Widget for TzSelector {
         let slider: Scale = builder_widget.get_object("tz_scale_select").expect("Could not get tz_scale_select");
         let cmb_tz_name: ComboBoxText = builder_widget.get_object("cmb_tz_name").expect("Could not get cmb_tz_name");
         let tz_scale_adj: Adjustment = builder_widget.get_object("tz_scale_adj").expect("Could not get tz_scale_adj");
+        let lbl_current_select_time: Label = builder_widget.get_object("lbl_current_select_time").expect("Could not get lbl_current_select_time");
+        let txt_search_tz: SearchEntry = builder_widget.get_object("txt_search_tz").expect("Could not get txt_search_tz");
 
-        connect!(relm, cmb_tz_name, connect_changed(_), Msg::TimezoneSelect);
-        connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::TimeSelect(val)), Inhibit(false)));
+        connect!(relm, cmb_tz_name, connect_changed(_), Msg::LocalTimezoneSelect);
+        connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::LocalTimeSelect(val)), Inhibit(false)));
+        connect!(relm, txt_search_tz, connect_search_changed(_), Msg::SearchContentsChange);
         
+        //The component is loaded inside of a window, need to remove this link
         box_root.unparent();
         slider.set_adjustment(&tz_scale_adj);
 
@@ -168,6 +191,8 @@ impl Widget for TzSelector {
             slider,
             cmb_tz_name,
             tz_scale_adj,
+            lbl_current_select_time,
+            txt_search_tz,
         };
 
         TzSelector {
