@@ -1,7 +1,7 @@
 use relm::{Relm, Update, Widget, Channel};
 use gtk::prelude::*;
 use gtk::{Window, Builder, Box, BoxExt,
-    MenuItem, Button, ButtonExt, Switch,
+    MenuItem, Button, ButtonExt, Switch, ToolButton,
     TreeView, TreeViewExt, ListStore, TreeModelFilter, TreeModelFilterExt, TreeViewColumnBuilder, CellRendererTextBuilder, TreeModel, TreeIter,
 };
 use glib::types::Type;
@@ -52,12 +52,21 @@ impl Update for Win {
                 // self.save_config();
                 gtk::main_quit();
             },
+            AddTzSelector => {
+                let new_selector = self.widgets.tz_box.add_widget::<TzSelector>(());
+                self.model.tz_ctrls.push(new_selector);
+            },
             //Messages from child components
             TimezoneSelectChanged(new_zone) => {
-                self.model.tz_ctrls[1].emit(crate::widgets::Msg::FromParentBaseTimezoneChanged(format!("{}", new_zone)));
+                for i in 1..self.model.tz_ctrls.len() {
+                    self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentBaseTimezoneChanged(format!("{}", new_zone)));
+                }
+                
             },
             TimeSelectChanged(new_time) => {
-                self.model.tz_ctrls[1].emit(crate::widgets::Msg::FromParentBaseTimeSelectChanged(new_time));
+                for i in 1..self.model.tz_ctrls.len() {
+                    self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentBaseTimeSelectChanged(new_time));
+                }
             },
             //Messages to child componenets
             ChangeBaseTimezone => {
@@ -91,6 +100,7 @@ impl Widget for Win {
         let menu_item_quit: MenuItem = builder_main.get_object("menu_item_quit").expect("Couldn't get quite menu item");
         // let time_ctrl: Window = builder.get_object("widget_tz_control").expect("Could not get time control window");
         let tz_box: Box = builder_main.get_object("box_widgets").expect("Could not get the widgets box");
+        let tb_btn_add_tz: ToolButton = builder_main.get_object("tb_btn_add_tz").expect("Could not get tb_btn_add_tz");
         
         let first_selector = tz_box.add_widget::<TzSelector>(());
         connect!(first_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(ref new_zone), relm, Msg::TimezoneSelectChanged(new_zone.clone()));
@@ -106,6 +116,7 @@ impl Widget for Win {
         connect!(relm, window, connect_delete_event(_, _), return (Some(Msg::Quit), Inhibit(false)));
         // connect!(relm, window, connect_show(_), Msg::SetupTree);
         connect!(relm, menu_item_quit, connect_activate(_), Msg::Quit);
+        connect!(relm, tb_btn_add_tz, connect_clicked(_), Msg::AddTzSelector);
         
 
         window.show_all();
@@ -114,6 +125,7 @@ impl Widget for Win {
         let widgets = MainWidgets {
             tz_box,
             window,
+            tb_btn_add_tz,
         };
 
         Win {

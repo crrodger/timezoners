@@ -1,5 +1,5 @@
 use glib::{ToValue, Type};
-use gtk::{Align, Box, BoxExt, ButtonExt, ComboBox, ComboBoxExt, ComboBoxTextBuilder, Entry, Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, TreeModelExt, WidgetExt, Window};
+use gtk::{Align, Box, BoxExt, ToolButton, ButtonExt, ComboBox, ComboBoxExt, ComboBoxTextBuilder, Entry, Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, TreeModelExt, WidgetExt, Window};
 use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, 
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt};
@@ -16,6 +16,7 @@ use self::Msg::*;
 pub struct MainWidgets {
     pub tz_box: Box,
     pub window: Window,
+    pub tb_btn_add_tz: ToolButton,
 }
 
 #[derive(Clone, Msg)]

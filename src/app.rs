@@ -15,6 +15,7 @@ pub enum MsgUpdateType {
 pub enum Msg {
     ProcessUpdateMsg((MsgUpdateType, String)),
     Quit,
+    AddTzSelector,
     //Messages from child widgets
     TimezoneSelectChanged(String),
     TimeSelectChanged(f64),
