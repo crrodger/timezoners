@@ -62,7 +62,7 @@ impl Update for Win {
             },
             //Messages from child components
             TimezoneSelectChanged(new_zone) => {
-                for i in 1..self.model.tz_ctrls.len() {
+                for i in 0..self.model.tz_ctrls.len() {
                     self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentBaseTimezoneChanged(format!("{}", new_zone)));
                 }
                 

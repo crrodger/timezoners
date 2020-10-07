@@ -103,12 +103,16 @@ impl TzSelector {
 
     fn update_time_display(&self) {
         let slider_value = self.widgets.slider.get_value();
-        let display_value = get_time_string_from_index(slider_value, self.widgets.lbl_start.get_text().as_str());
+        let display_value = get_time_string_from_index(slider_value.round(), self.widgets.lbl_start.get_text().as_str());
         self.widgets.lbl_current_select_time.set_text(&display_value);
     }
 
     fn setup_model(&self) {
-        let new_cell = CellRendererTextBuilder::new();
+        let mut new_cell = CellRendererTextBuilder::new();
+        new_cell = new_cell.max_width_chars(25);
+        new_cell = new_cell.ellipsize_set(true);
+        // new_cell = new_cell.size(20);
+
         let cell = new_cell.build();
         self.widgets.cmb_tz_name.pack_start(&cell, true);
         self.widgets.cmb_tz_name.add_attribute(&cell, "text", 0);
@@ -191,6 +195,9 @@ impl Update for TzSelector {
                 } else {
                     return;
                 }
+                // if self.model.index == 0 {
+                //     self.model.base_timezone = Some(tz_string.clone());
+                // }
                 // let tz_string = format!("{}", self.widgets.cmb_tz_name.get_active_id().unwrap());
                 self.model.this_timezone = Some(tz_string.clone());
                 self.updateTimeLabels();
@@ -200,7 +207,7 @@ impl Update for TzSelector {
             },
             LocalTimeSelect(value) => {
                 // println!("Value {}", value);
-                self.model.local_relm.stream().emit(Msg::NotifyParentTimeSelectChanged(value));
+                self.model.local_relm.stream().emit(Msg::NotifyParentTimeSelectChanged(value.round()));
                 self.update_time_display();
             },
             NotifyParentTimezoneSelectChanged(_new_zone) => {
@@ -271,6 +278,9 @@ impl Widget for TzSelector {
         connect!(relm, txt_search_tz, connect_search_changed(_), Msg::SearchContentsChange);
         connect!(relm, txt_search_tz, connect_key_release_event(_, key), return (Msg::SearchKeyReleased(key.clone()), Inhibit(false)));
         connect!(relm, pb_remove_tz, connect_clicked(_), Msg::RemoveTz);
+        // slider.connect_format_value( |var, val| {
+        //     return get_time_string_from_index(val, "12:00 am");
+        // });
         relm.stream().emit(Msg::SetupModel);
         
         cmb_tz_name.set_model(Some(&model.liststorefilter));
@@ -296,6 +306,7 @@ impl Widget for TzSelector {
             }
         });
 
+
         //The component is loaded inside of a window, need to remove this link
         box_root.unparent();
         slider.set_adjustment(&tz_scale_adj);
@@ -320,6 +331,10 @@ impl Widget for TzSelector {
 
     fn init_view(&mut self) {
         self.widgets.txt_search_tz.set_property_width_request(20);
+        if self.model.index == 0 {
+            self.widgets.pb_remove_tz.set_sensitive(false);
+            self.widgets.pb_remove_tz.set_visible(false);
+        }
     }
     
 }
