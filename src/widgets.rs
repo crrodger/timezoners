@@ -1,14 +1,12 @@
-use glib::{ToValue, Type, IsA};
-use gtk::{Align, Box, BoxExt, ToolButton, Button, ButtonExt, ComboBox, ComboBoxExt, ComboBoxTextBuilder, Entry, Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, TreeModelExt, WidgetExt, Window};
-use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, 
+use glib::{ToValue, Type};
+use gtk::{Box, ToolButton, Button, ButtonExt, ComboBox, ComboBoxExt, Inhibit, Label, LabelExt, RangeExt, Scale, TreeModelExt, WidgetExt, Window};
+use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, 
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt};
-use relm::{Update, Widget, Relm, EventStream};
+use relm::{Update, Widget, Relm};
 use gdk::{EventKey};
-use relm_derive::{widget};
-use chrono::{TimeZone, Utc, NaiveDate, NaiveTime, Local, Datelike, Duration};
+use chrono::{TimeZone, NaiveDate, NaiveTime, Local, Datelike, Duration};
 use chrono_tz::{TZ_VARIANTS, Tz};
-use crate::{win};
 
 use self::Msg::*;
 
@@ -66,7 +64,7 @@ impl TzSelector {
         self.model.index = index;
     }
 
-    fn updateTimeLabels(&self) {
+    fn update_time_labels(&self) {
         match &self.model.base_timezone {
             Some(base_zone) => {
                 let local_now = Local::now();
@@ -123,15 +121,14 @@ impl TzSelector {
     fn add_timezone_strings(&self) {
         for tz_name in TZ_VARIANTS.iter() {
             // println!("Item {}", tz_name.name());
-            self.add_data_row(&tz_name.name(), &tz_name.name());
+            self.add_data_row(&tz_name.name());
         }
     }
 
-    fn add_data_row(&self, col1: &str, col2: &str) {
+    fn add_data_row(&self, col1: &str) {
         let row = self.model.liststore.append();
 
         self.model.liststore.set_value(&row, 0, &col1.to_value());
-        // self.model.liststore.set_value(&row, 1, &col2.to_value());
     }
 
     fn add_text_column(&self, title: &str, column: i32) {
@@ -200,7 +197,7 @@ impl Update for TzSelector {
                 // }
                 // let tz_string = format!("{}", self.widgets.cmb_tz_name.get_active_id().unwrap());
                 self.model.this_timezone = Some(tz_string.clone());
-                self.updateTimeLabels();
+                self.update_time_labels();
                 self.update_time_display();
                 //Caught by parent win update loop
                 self.model.local_relm.stream().emit(Msg::NotifyParentTimezoneSelectChanged(tz_string));
@@ -219,7 +216,7 @@ impl Update for TzSelector {
             FromParentBaseTimezoneChanged(new_zone) => {
                 println!("Base tz change to {}", new_zone);
                 self.model.base_timezone = Some(new_zone);
-                self.updateTimeLabels();
+                self.update_time_labels();
             },
             // Should only be recieved by non base timezone Tz Controls
             FromParentBaseTimeSelectChanged(new_time) => {
@@ -259,7 +256,7 @@ impl Widget for TzSelector {
         self.widgets.box_root.clone()
     }
 
-    fn view(relm: &Relm<Self>, mut model: Self::Model) -> Self {
+    fn view(relm: &Relm<Self>, model: Self::Model) -> Self {
         let glade_src_widg = include_str!("timezoners_tz_widget.glade");
         let builder_widget = Builder::from_string(glade_src_widg);
 

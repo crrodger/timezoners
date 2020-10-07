@@ -1,10 +1,8 @@
 use relm::{Relm, Update, Widget, Channel};
 use gtk::prelude::*;
-use gtk::{Window, Builder, Box, BoxExt,
-    MenuItem, Button, ButtonExt, Switch, ToolButton,
-    TreeView, TreeViewExt, ListStore, TreeModelFilter, TreeModelFilterExt, TreeViewColumnBuilder, CellRendererTextBuilder, TreeModel, TreeIter,
+use gtk::{Window, Builder, Box, 
+    MenuItem, ToolButton,
 };
-use glib::types::Type;
 use crate::relm::ContainerWidget;
 use crate::config::*;
 use crate::model::*;
@@ -55,6 +53,7 @@ impl Update for Win {
             },
             AddTzSelector => {
                 let new_selector = self.widgets.tz_box.add_widget::<TzSelector>(self.model.tz_ctrls.len() as i32);
+                
                 // self.widgets.tz_box.pack_start::<Box>(&new_selector.widget(), false, false, 0);
                 connect!(new_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
                 self.model.tz_ctrls.push(new_selector);

@@ -3,6 +3,7 @@ name = "timezoners"
 version = "0.1.0"
 authors = ["Craig Rodger"]
 edition = "2018"
+description = "Multiple timezone viewer utility"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -23,3 +24,18 @@ features = ["v3_16",]
 [dependencies.gio]
 version = ""
 features = ["v2_44"]
+
+[package.metadata.bundle]
+name = "TimezoneRS"
+identifier = "com.craigrodger.timezoners"
+icon = ["32x32.png", "128x128.png"]
+version = "0.1.0"
+copyright = "Copyright (c) Craig Rodger 2020. All rights reserved."
+category = "Utility"
+short_description = "Multiple timezone viewer utility"
+long_description = """
+Monitor the kernal memory zone kalloc.32 for abnormal growth that will lead
+to a system panic (OSX)
+"""
+# Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon"> www.flaticon.com</a>
+# 
