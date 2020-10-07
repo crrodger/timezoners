@@ -319,7 +319,7 @@ impl Widget for TzSelector {
     }
 
     fn init_view(&mut self) {
-        
+        self.widgets.txt_search_tz.set_property_width_request(20);
     }
     
 }

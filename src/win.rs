@@ -55,8 +55,10 @@ impl Update for Win {
             },
             AddTzSelector => {
                 let new_selector = self.widgets.tz_box.add_widget::<TzSelector>(self.model.tz_ctrls.len() as i32);
+                // self.widgets.tz_box.pack_start::<Box>(&new_selector.widget(), false, false, 0);
                 connect!(new_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
                 self.model.tz_ctrls.push(new_selector);
+                
             },
             //Messages from child components
             TimezoneSelectChanged(new_zone) => {
@@ -71,7 +73,7 @@ impl Update for Win {
                 }
             },
             Msg::TimezoneRemove(remove_index) => {
-                let rem_widget = self.model.tz_ctrls.remove(remove_index as usize);
+                let rem_widget = self.model.tz_ctrls.get(remove_index as usize).unwrap();
                 // println!("{:#?}", rem_widget);
                 self.widgets.tz_box.remove::<Box>(rem_widget.widget());
             },
