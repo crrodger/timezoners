@@ -1,5 +1,5 @@
-use glib::{ToValue, Type};
-use gtk::{Align, Box, BoxExt, ToolButton, ButtonExt, ComboBox, ComboBoxExt, ComboBoxTextBuilder, Entry, Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, TreeModelExt, WidgetExt, Window};
+use glib::{ToValue, Type, IsA};
+use gtk::{Align, Box, BoxExt, ToolButton, Button, ButtonExt, ComboBox, ComboBoxExt, ComboBoxTextBuilder, Entry, Inhibit, Label, LabelExt, OrientableExt, Orientation, PackType, RangeExt, Scale, ScaleExt, TreeModelExt, WidgetExt, Window};
 use gtk::{Builder, Orientation::{Horizontal, Vertical}, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, 
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt};
@@ -24,10 +24,12 @@ pub enum Msg {
     SetupModel,
     SearchContentsChange,
     SearchKeyReleased(EventKey),
+    RemoveTz,
     LocalTimezoneSelect,
     NotifyParentTimezoneSelectChanged(String),
     LocalTimeSelect(f64),
     NotifyParentTimeSelectChanged(f64),
+    NotifyParentTzSelectorRemoveClicked(i32),
     FromParentBaseTimeSelectChanged(f64),
     FromParentBaseTimezoneChanged(String),
 }
@@ -37,6 +39,7 @@ pub struct TzSelectorModel {
     local_relm: Relm<TzSelector>,
     pub liststore: ListStore,
     pub liststorefilter: TreeModelFilter,
+    index: i32,
 }
 
 pub struct TzSelectorWidgets {
@@ -48,6 +51,7 @@ pub struct TzSelectorWidgets {
     pub tz_scale_adj: Adjustment,
     pub lbl_current_select_time: Label,
     pub txt_search_tz: SearchEntry,
+    pub pb_remove_tz: Button,
 }
 
 
@@ -57,6 +61,10 @@ pub struct TzSelector {
 }
 
 impl TzSelector {
+
+    pub fn set_index(&mut self, index: i32) {
+        self.model.index = index;
+    }
 
     fn updateTimeLabels(&self) {
         match &self.model.base_timezone {
@@ -151,7 +159,7 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
 impl Update for TzSelector {
     
     type Model = TzSelectorModel;
-    type ModelParam = ();
+    type ModelParam = i32;
     type Msg = Msg;
     
     fn update(&mut self, event: Msg) {
@@ -161,10 +169,7 @@ impl Update for TzSelector {
                 self.add_timezone_strings();
             },
             SearchContentsChange => {
-                if self.widgets.txt_search_tz.get_text_length() >= 3 {
-                    self.model.liststorefilter.refilter();
-                }
-                
+                self.model.liststorefilter.refilter();
             },
             SearchKeyReleased(key) => {
                 if let Some(key_name) = key.get_keyval().name() {
@@ -172,6 +177,12 @@ impl Update for TzSelector {
                         self.widgets.cmb_tz_name.popup();
                     }
                 }
+            },
+            RemoveTz => {
+                self.model.local_relm.stream().emit(Msg::NotifyParentTzSelectorRemoveClicked(self.model.index));
+            },
+            NotifyParentTzSelectorRemoveClicked(_) => {
+                // Dummy, message is intercepted at win but have to complete match arms here
             },
             LocalTimezoneSelect => {
                 let tz_string: String;
@@ -227,6 +238,7 @@ impl Update for TzSelector {
             local_relm,
             liststore,
             liststorefilter,
+            index: param,
         }
     }
 }
@@ -252,11 +264,13 @@ impl Widget for TzSelector {
         let tz_scale_adj: Adjustment = builder_widget.get_object("tz_scale_adj").expect("Could not get tz_scale_adj");
         let lbl_current_select_time: Label = builder_widget.get_object("lbl_current_select_time").expect("Could not get lbl_current_select_time");
         let txt_search_tz: SearchEntry = builder_widget.get_object("txt_search_tz").expect("Could not get txt_search_tz");
+        let pb_remove_tz: Button = builder_widget.get_object("pb_remove_tz").expect("Could not get pb_remove_tz");
 
         connect!(relm, cmb_tz_name, connect_changed(_), Msg::LocalTimezoneSelect);
         connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::LocalTimeSelect(val)), Inhibit(false)));
         connect!(relm, txt_search_tz, connect_search_changed(_), Msg::SearchContentsChange);
         connect!(relm, txt_search_tz, connect_key_release_event(_, key), return (Msg::SearchKeyReleased(key.clone()), Inhibit(false)));
+        connect!(relm, pb_remove_tz, connect_clicked(_), Msg::RemoveTz);
         relm.stream().emit(Msg::SetupModel);
         
         cmb_tz_name.set_model(Some(&model.liststorefilter));
@@ -295,6 +309,7 @@ impl Widget for TzSelector {
             tz_scale_adj,
             lbl_current_select_time,
             txt_search_tz,
+            pb_remove_tz,
         };
 
         TzSelector {
@@ -309,3 +324,10 @@ impl Widget for TzSelector {
     
 }
 
+// impl IsA<dyn Widget> for TzSelector {
+//     type Model = TzSelectorModel;
+//     type ModelParam = i32;
+//     type Msg = Msg;
+
+
+// }

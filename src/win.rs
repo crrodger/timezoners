@@ -34,6 +34,7 @@ impl Update for Win {
         Model {
             tz_ctrls: vec![],
             sender,
+            local_relm: relm.clone(),
         }
     }
 
@@ -53,7 +54,8 @@ impl Update for Win {
                 gtk::main_quit();
             },
             AddTzSelector => {
-                let new_selector = self.widgets.tz_box.add_widget::<TzSelector>(());
+                let new_selector = self.widgets.tz_box.add_widget::<TzSelector>(self.model.tz_ctrls.len() as i32);
+                connect!(new_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
                 self.model.tz_ctrls.push(new_selector);
             },
             //Messages from child components
@@ -67,6 +69,11 @@ impl Update for Win {
                 for i in 1..self.model.tz_ctrls.len() {
                     self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentBaseTimeSelectChanged(new_time));
                 }
+            },
+            Msg::TimezoneRemove(remove_index) => {
+                let rem_widget = self.model.tz_ctrls.remove(remove_index as usize);
+                // println!("{:#?}", rem_widget);
+                self.widgets.tz_box.remove::<Box>(rem_widget.widget());
             },
             //Messages to child componenets
             ChangeBaseTimezone => {
@@ -102,10 +109,12 @@ impl Widget for Win {
         let tz_box: Box = builder_main.get_object("box_widgets").expect("Could not get the widgets box");
         let tb_btn_add_tz: ToolButton = builder_main.get_object("tb_btn_add_tz").expect("Could not get tb_btn_add_tz");
         
-        let first_selector = tz_box.add_widget::<TzSelector>(());
+        let first_selector = tz_box.add_widget::<TzSelector>(0);
+        // first_selector.set_index(0);
         connect!(first_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(ref new_zone), relm, Msg::TimezoneSelectChanged(new_zone.clone()));
         connect!(first_selector@crate::widgets::Msg::NotifyParentTimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
-        let second_selector = tz_box.add_widget::<TzSelector>(());
+        let second_selector = tz_box.add_widget::<TzSelector>(1);
+        connect!(second_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), relm, Msg::TimezoneRemove(remove_index));
         
         // connect!(second_selector@crate::widgets::Msg::TimezoneSelectChanged, relm, Msg::TimezoneSelectChanged);
         
