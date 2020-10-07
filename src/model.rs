@@ -9,4 +9,5 @@ pub struct Model {
     pub tz_ctrls: Vec<Component<TzSelector>>,
     pub sender: Sender<(MsgUpdateType, String)>, 
     pub local_relm: Relm<Win>,
+    pub base_tz: String,
 }

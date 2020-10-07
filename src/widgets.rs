@@ -27,6 +27,7 @@ pub enum Msg {
     NotifyParentTimezoneSelectChanged(String),
     LocalTimeSelect(f64),
     NotifyParentTimeSelectChanged(f64),
+    NotifyParentBaseTzChanged(String),
     NotifyParentTzSelectorRemoveClicked(i32),
     FromParentBaseTimeSelectChanged(f64),
     FromParentBaseTimezoneChanged(String),
@@ -38,6 +39,7 @@ pub struct TzSelectorModel {
     pub liststore: ListStore,
     pub liststorefilter: TreeModelFilter,
     index: i32,
+    base_tz: String,
 }
 
 pub struct TzSelectorWidgets {
@@ -160,7 +162,7 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
 impl Update for TzSelector {
     
     type Model = TzSelectorModel;
-    type ModelParam = i32;
+    type ModelParam = (i32, String);
     type Msg = Msg;
     
     fn update(&mut self, event: Msg) {
@@ -200,7 +202,10 @@ impl Update for TzSelector {
                 self.update_time_labels();
                 self.update_time_display();
                 //Caught by parent win update loop
-                self.model.local_relm.stream().emit(Msg::NotifyParentTimezoneSelectChanged(tz_string));
+                self.model.local_relm.stream().emit(Msg::NotifyParentTimezoneSelectChanged(tz_string.clone()));
+                if self.model.index == 0 {
+                    self.model.local_relm.stream().emit(Msg::NotifyParentBaseTzChanged(tz_string.clone()));
+                }
             },
             LocalTimeSelect(value) => {
                 // println!("Value {}", value);
@@ -211,6 +216,9 @@ impl Update for TzSelector {
                 // Dummy, message is intercepted at win but have to complete match arms here
             },
             NotifyParentTimeSelectChanged(_new_value) => {
+                // Dummy, message is intercepted at win but have to complete match arms here
+            },
+            NotifyParentBaseTzChanged(_base_zone) => {
                 // Dummy, message is intercepted at win but have to complete match arms here
             },
             FromParentBaseTimezoneChanged(new_zone) => {
@@ -242,7 +250,8 @@ impl Update for TzSelector {
             local_relm,
             liststore,
             liststorefilter,
-            index: param,
+            index: (param.0),
+            base_tz: (param.1),
         }
     }
 }
