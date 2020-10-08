@@ -1,9 +1,4 @@
 use relm::{Widget};
-// use gtk::prelude::*;
-// use gtk::{Window, Builder, Type, 
-//     MenuItem, Button, ButtonExt, Switch,
-//     TreeView, TreeViewExt, ListStore, TreeModelFilter, TreeModelFilterExt, TreePath, TreeViewColumnBuilder, CellRendererTextBuilder, TreeModel, TreeIter,
-// };
 use crate::win::*;
 
 #[derive(Debug)]
@@ -15,7 +10,7 @@ pub enum MsgUpdateType {
 pub enum Msg {
     ProcessUpdateMsg((MsgUpdateType, String)),
     Quit,
-    AddTzSelector,
+    AddTzSelector(String),
     //Messages from child widgets
     TimezoneSelectChanged(String),
     TimeSelectChanged(f64),

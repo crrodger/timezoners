@@ -162,7 +162,7 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
 impl Update for TzSelector {
     
     type Model = TzSelectorModel;
-    type ModelParam = (i32, String);
+    type ModelParam = (i32, String, String);
     type Msg = Msg;
     
     fn update(&mut self, event: Msg) {

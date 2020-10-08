@@ -3,14 +3,13 @@ use gtk::prelude::*;
 use gtk::{Window, Builder, Box, 
     MenuItem, ToolButton,
 };
+use confy::*;
 use crate::relm::ContainerWidget;
-use crate::config::*;
 use crate::model::*;
 use crate::widgets::{MainWidgets, *};
 use crate::app::{Msg, MsgUpdateType};
 
 pub struct Win {
-    config: Config,
     pub model: Model,
     widgets: MainWidgets,
 }
@@ -22,6 +21,10 @@ impl Update for Win {
 
     fn model(relm: &Relm<Self>, _: ()) -> Model {
         
+        let config: Config = match confy::load("TimezoneRS") {
+            Ok(x) =>  x,
+            Err(_) => Config::default(),
+        };
         let stream = relm.stream().clone();
         let (_channel, sender) = Channel::new(move |upd_tuple| {
             // This closure is executed whenever a message is received from the sender.
@@ -34,6 +37,7 @@ impl Update for Win {
             sender,
             local_relm: relm.clone(),
             base_tz: String::from(""),
+            config,
         }
     }
 
@@ -52,13 +56,8 @@ impl Update for Win {
                 // self.save_config();
                 gtk::main_quit();
             },
-            AddTzSelector => {
-                let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone()));
-                
-                // self.widgets.tz_box.pack_start::<Box>(&new_selector.widget(), false, false, 0);
-                connect!(new_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
-                self.model.tz_ctrls.push(new_selector);
-                
+            AddTzSelector(tz_location) => {
+                self.add_tz_selector(tz_location);
             },
             //Messages from child components
             TimezoneSelectChanged(new_zone) => {
@@ -86,6 +85,7 @@ impl Update for Win {
             },
         }
     }
+    
 }
 
 impl Widget for Win {
@@ -98,12 +98,12 @@ impl Widget for Win {
     }
 
     fn view(relm: &Relm<Self>, mut model: Self::Model) -> Self {
-        
-        let config: Config = match confy::load("timezoners_gui.glade") {
-            Ok(x) =>  x,
-            Err(_) => Config::default(),
-        };
-         
+        let base_tz = String::from("");
+
+        if model.config.zones.len() > 0 {
+            let base_tz = model.config.zones[0].clone();
+        }
+
         let glade_src_main = include_str!("timezoners_gui.glade");
         let builder_main = Builder::from_string(glade_src_main);
 
@@ -114,27 +114,24 @@ impl Widget for Win {
         let tz_box: Box = builder_main.get_object("box_widgets").expect("Could not get the widgets box");
         let tb_btn_add_tz: ToolButton = builder_main.get_object("tb_btn_add_tz").expect("Could not get tb_btn_add_tz");
         
-        let first_selector = tz_box.add_widget::<TzSelector>((0, String::from("")));
+        let first_selector = tz_box.add_widget::<TzSelector>((0, base_tz.clone(), base_tz.clone()));
         // first_selector.set_index(0);
         connect!(first_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(ref new_zone), relm, Msg::TimezoneSelectChanged(new_zone.clone()));
         connect!(first_selector@crate::widgets::Msg::NotifyParentTimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
         connect!(first_selector@crate::widgets::Msg::NotifyParentBaseTzChanged(ref new_zone), relm, Msg::ChangeBaseTimezone(new_zone.clone()));
-        let second_selector = tz_box.add_widget::<TzSelector>((1, String::from("")));
-        connect!(second_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), relm, Msg::TimezoneRemove(remove_index));
         
         // connect!(second_selector@crate::widgets::Msg::TimezoneSelectChanged, relm, Msg::TimezoneSelectChanged);
         
         model.tz_ctrls.push(first_selector);
-        model.tz_ctrls.push(second_selector);
-        
         
         connect!(relm, window, connect_delete_event(_, _), return (Some(Msg::Quit), Inhibit(false)));
         // connect!(relm, window, connect_show(_), Msg::SetupTree);
         connect!(relm, menu_item_quit, connect_activate(_), Msg::Quit);
-        connect!(relm, tb_btn_add_tz, connect_clicked(_), Msg::AddTzSelector);
+        connect!(relm, tb_btn_add_tz, connect_clicked(_), Msg::AddTzSelector(String::from("")));
         
-
         window.show_all();
+        window.move_(model.config.win_pos_x, model.config.win_pos_y);
+        window.resize(model.config.win_width, model.config.win_height);
         
 
         let widgets = MainWidgets {
@@ -144,14 +141,17 @@ impl Widget for Win {
         };
 
         Win {
-            config,
             model,
             widgets,
         }
     }
 
     fn init_view(&mut self) {
-        
+        if self.model.config.zones.len() > 0 {
+            for i in 1..self.model.config.zones.len() {
+                self.add_tz_selector(self.model.config.zones[i].clone());
+            }
+        }
     }
 
     fn on_add<W: IsA<gtk::Widget> + IsA<glib::Object>>(&self, _parent: W) {
@@ -170,6 +170,10 @@ impl Widget for Win {
 
 
 impl Win {
-    
+    fn add_tz_selector(&mut self, tz_location: String) {
+        let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), tz_location));
+        connect!(new_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
+        self.model.tz_ctrls.push(new_selector);
+    }
 
 }
