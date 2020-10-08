@@ -3,7 +3,6 @@ use gtk::prelude::*;
 use gtk::{Window, Builder, Box, 
     MenuItem, ToolButton,
 };
-use confy::*;
 use crate::relm::ContainerWidget;
 use crate::model::*;
 use crate::widgets::{MainWidgets, *};
@@ -34,7 +33,7 @@ impl Update for Win {
             tz_zones: vec![],
             sender,
             local_relm: relm.clone(),
-            base_tz: String::from(""),
+            base_tz: None,
         }
     }
 
@@ -53,7 +52,7 @@ impl Update for Win {
                 self.config.zones.clear();
                 for i in 0..self.model.tz_zones.len() {
                     if let Some(tz_zone) = self.model.tz_zones[i].clone() {
-                        self.config.zones.push(tz_zone);
+                        self.config.zones.push(Some(tz_zone));
                     }
                     
                 }
@@ -103,7 +102,7 @@ impl Widget for Win {
     }
 
     fn view(relm: &Relm<Self>, mut model: Self::Model) -> Self {
-        let mut base_tz = String::from("");
+        let mut base_tz: Option<String> = None;
 
         let config: Config = match confy::load("TimezoneRS") {
             Ok(x) =>  x,
@@ -111,7 +110,10 @@ impl Widget for Win {
         };
 
         if config.zones.len() > 0 {
-            base_tz = config.zones[0].clone();
+            if let Some(tz_string) = config.zones[0].clone() {
+                base_tz = Some(tz_string.clone());
+            }
+            
         }
         model.base_tz = base_tz.clone();
 
@@ -129,12 +131,12 @@ impl Widget for Win {
         // first_selector.set_index(0);
         connect!(first_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
         connect!(first_selector@crate::widgets::Msg::NotifyParentTimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
-        connect!(first_selector@crate::widgets::Msg::NotifyParentBaseTzChanged(ref new_zone), relm, Msg::ChangeBaseTimezone(new_zone.clone()));
+        connect!(first_selector@crate::widgets::Msg::NotifyParentBaseTzChanged(ref new_zone), relm, Msg::ChangeBaseTimezone(Some(new_zone.clone())));
         
         // connect!(second_selector@crate::widgets::Msg::TimezoneSelectChanged, relm, Msg::TimezoneSelectChanged);
         
         model.tz_ctrls.push(first_selector);
-        model.tz_zones.push(Some(base_tz));
+        model.tz_zones.push(base_tz);
         
         connect!(relm, window, connect_delete_event(_, _), return (Some(Msg::Quit), Inhibit(false)));
         // connect!(relm, window, connect_show(_), Msg::SetupTree);
@@ -161,7 +163,11 @@ impl Widget for Win {
     fn init_view(&mut self) {
         if self.config.zones.len() > 0 {
             for i in 1..self.config.zones.len() {
-                self.add_tz_selector(self.config.zones[i].clone());
+                if let Some(tz_location) = self.config.zones[i].clone() {
+                    if tz_location.len() > 0 {
+                        self.add_tz_selector(tz_location);
+                    }
+                }
             }
         }
     }
@@ -183,7 +189,7 @@ impl Widget for Win {
 
 impl Win {
     fn add_tz_selector(&mut self, tz_location: String) {
-        let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), tz_location.clone()));
+        let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), Some(tz_location.clone())));
         connect!(new_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
         connect!(new_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), self.model.local_relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
         self.model.tz_ctrls.push(new_selector);

@@ -29,7 +29,7 @@ pub enum Msg {
     NotifyParentBaseTzChanged(String),
     NotifyParentTzSelectorRemoveClicked(i32),
     FromParentBaseTimeSelectChanged(f64),
-    FromParentBaseTimezoneChanged(String),
+    FromParentBaseTimezoneChanged(Option<String>),
 }
 pub struct TzSelectorModel {
     index: i32,
@@ -77,7 +77,11 @@ impl TzSelector {
 
                 let tz_curr: Tz;
                 if let Some(tz) = self.model.this_timezone.clone() {
-                    tz_curr = tz.parse().unwrap();
+                    if tz.len() > 0 {
+                        tz_curr = tz.parse().unwrap();
+                    } else {
+                        return
+                    }
                 } else {
                     //If no timezone is selected for current control do nothing
                     return;
@@ -160,7 +164,7 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
 impl Update for TzSelector {
     
     type Model = TzSelectorModel;
-    type ModelParam = (i32, String, String);
+    type ModelParam = (i32, Option<String>, Option<String>);
     type Msg = Msg;
     
     fn update(&mut self, event: Msg) {
@@ -216,8 +220,8 @@ impl Update for TzSelector {
                 // Dummy, message is intercepted at win but have to complete match arms here
             },
             FromParentBaseTimezoneChanged(new_zone) => {
-                println!("Base tz change to {}", new_zone);
-                self.model.base_timezone = Some(new_zone);
+                // println!("Base tz change to {}", new_zone);
+                self.model.base_timezone = new_zone;
                 self.update_time_labels();
             },
             // Should only be recieved by non base timezone Tz Controls
@@ -231,8 +235,8 @@ impl Update for TzSelector {
     fn model(relm: &relm::Relm<Self>, param: Self::ModelParam) -> Self::Model {
         let local_relm = relm.clone();
         let index = param.0;
-        let base_timezone = Some(param.1);
-        let this_timezone = Some(param.2);
+        let base_timezone = param.1;
+        let this_timezone = param.2;
         let liststore = ListStore::new(&[
             Type::String,
         ]);

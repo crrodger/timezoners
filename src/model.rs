@@ -10,12 +10,12 @@ pub struct Model {
     pub tz_zones: Vec<Option<String>>,
     pub sender: Sender<(MsgUpdateType, String)>, 
     pub local_relm: Relm<Win>,
-    pub base_tz: String,
+    pub base_tz: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    pub zones:                  Vec<String>,
+    pub zones:            Vec<Option<String>>,
     pub win_pos_x:        i32,
     pub win_pos_y:        i32,
     pub win_width:        i32,

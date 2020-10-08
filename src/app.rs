@@ -16,7 +16,7 @@ pub enum Msg {
     TimeSelectChanged(f64),
     TimezoneRemove(i32),
     //Messages to child widgets
-    ChangeBaseTimezone(String),
+    ChangeBaseTimezone(Option<String>),
 }
 
 pub struct App;
