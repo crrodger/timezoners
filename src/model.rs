@@ -7,10 +7,10 @@ use crate::{win::Win, app::MsgUpdateType};
 // #[derive(Debug)]
 pub struct Model {
     pub tz_ctrls: Vec<Component<TzSelector>>,
+    pub tz_zones: Vec<Option<String>>,
     pub sender: Sender<(MsgUpdateType, String)>, 
     pub local_relm: Relm<Win>,
     pub base_tz: String,
-    pub config: Config,
 }
 
 #[derive(Serialize, Deserialize)]

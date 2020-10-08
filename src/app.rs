@@ -12,7 +12,7 @@ pub enum Msg {
     Quit,
     AddTzSelector(String),
     //Messages from child widgets
-    TimezoneSelectChanged(String),
+    TimezoneSelectChanged(i32, String),
     TimeSelectChanged(f64),
     TimezoneRemove(i32),
     //Messages to child widgets

@@ -19,12 +19,11 @@ pub struct MainWidgets {
 
 #[derive(Clone, Msg)]
 pub enum Msg {
-    SetupModel,
     SearchContentsChange,
     SearchKeyReleased(EventKey),
     RemoveTz,
     LocalTimezoneSelect,
-    NotifyParentTimezoneSelectChanged(String),
+    NotifyParentTimezoneSelectChanged(i32, String),
     LocalTimeSelect(f64),
     NotifyParentTimeSelectChanged(f64),
     NotifyParentBaseTzChanged(String),
@@ -33,13 +32,12 @@ pub enum Msg {
     FromParentBaseTimezoneChanged(String),
 }
 pub struct TzSelectorModel {
+    index: i32,
     base_timezone: Option<String>,
     this_timezone: Option<String>,
     local_relm: Relm<TzSelector>,
     pub liststore: ListStore,
     pub liststorefilter: TreeModelFilter,
-    index: i32,
-    base_tz: String,
 }
 
 pub struct TzSelectorWidgets {
@@ -107,7 +105,7 @@ impl TzSelector {
         self.widgets.lbl_current_select_time.set_text(&display_value);
     }
 
-    fn setup_model(&self) {
+    fn setup_cmb_liststore(&self) {
         let mut new_cell = CellRendererTextBuilder::new();
         new_cell = new_cell.max_width_chars(25);
         new_cell = new_cell.ellipsize_set(true);
@@ -167,10 +165,6 @@ impl Update for TzSelector {
     
     fn update(&mut self, event: Msg) {
         match event {
-            SetupModel => {
-                self.setup_model();
-                self.add_timezone_strings();
-            },
             SearchContentsChange => {
                 self.model.liststorefilter.refilter();
             },
@@ -202,7 +196,7 @@ impl Update for TzSelector {
                 self.update_time_labels();
                 self.update_time_display();
                 //Caught by parent win update loop
-                self.model.local_relm.stream().emit(Msg::NotifyParentTimezoneSelectChanged(tz_string.clone()));
+                self.model.local_relm.stream().emit(Msg::NotifyParentTimezoneSelectChanged(self.model.index, tz_string.clone()));
                 if self.model.index == 0 {
                     self.model.local_relm.stream().emit(Msg::NotifyParentBaseTzChanged(tz_string.clone()));
                 }
@@ -212,7 +206,7 @@ impl Update for TzSelector {
                 self.model.local_relm.stream().emit(Msg::NotifyParentTimeSelectChanged(value.round()));
                 self.update_time_display();
             },
-            NotifyParentTimezoneSelectChanged(_new_zone) => {
+            NotifyParentTimezoneSelectChanged(_index, _new_zone) => {
                 // Dummy, message is intercepted at win but have to complete match arms here
             },
             NotifyParentTimeSelectChanged(_new_value) => {
@@ -236,8 +230,9 @@ impl Update for TzSelector {
 
     fn model(relm: &relm::Relm<Self>, param: Self::ModelParam) -> Self::Model {
         let local_relm = relm.clone();
-        let base_timezone = None;
-        let this_timezone = None;
+        let index = param.0;
+        let base_timezone = Some(param.1);
+        let this_timezone = Some(param.2);
         let liststore = ListStore::new(&[
             Type::String,
         ]);
@@ -245,13 +240,12 @@ impl Update for TzSelector {
         let liststorefilter = TreeModelFilter::new(&liststore, None); //Probably need a TreePath for a tree not a list like I am using here
 
         TzSelectorModel {
+            index,
             base_timezone,
             this_timezone,
             local_relm,
             liststore,
             liststorefilter,
-            index: (param.0),
-            base_tz: (param.1),
         }
     }
 }
@@ -284,10 +278,12 @@ impl Widget for TzSelector {
         connect!(relm, txt_search_tz, connect_search_changed(_), Msg::SearchContentsChange);
         connect!(relm, txt_search_tz, connect_key_release_event(_, key), return (Msg::SearchKeyReleased(key.clone()), Inhibit(false)));
         connect!(relm, pb_remove_tz, connect_clicked(_), Msg::RemoveTz);
+        
         // slider.connect_format_value( |var, val| {
         //     return get_time_string_from_index(val, "12:00 am");
         // });
-        relm.stream().emit(Msg::SetupModel);
+        
+        // relm.stream().emit(Msg::SetupCmbListStore);
         
         cmb_tz_name.set_model(Some(&model.liststorefilter));
 
@@ -340,6 +336,14 @@ impl Widget for TzSelector {
         if self.model.index == 0 {
             self.widgets.pb_remove_tz.set_sensitive(false);
             self.widgets.pb_remove_tz.set_visible(false);
+        }
+        self.setup_cmb_liststore();
+        self.add_timezone_strings();
+        match self.model.this_timezone.clone() {
+            Some(tz_string) => {
+                self.widgets.cmb_tz_name.set_active_id(Some(tz_string.clone().as_ref()));
+            },
+            None => {},
         }
     }
     
