@@ -2,7 +2,7 @@ use glib::{ToValue, Type};
 use gtk::{Box, ToolButton, Button, ButtonExt, ComboBox, ComboBoxExt, Inhibit, Label, LabelExt, RangeExt, Scale, TreeModelExt, WidgetExt, Window};
 use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, 
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
-            CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt};
+            CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt};
 use relm::{Update, Widget, Relm};
 use gdk::{EventKey};
 use chrono::{TimeZone, NaiveDate, NaiveTime, Local, Datelike, Duration};
@@ -349,6 +349,13 @@ impl Widget for TzSelector {
             },
             None => {},
         }
+
+        let style_context = self.widgets.cmb_tz_name.get_style_context();
+        // TODO: remove the next line when relm supports css.
+        let style = include_bytes!("styling.css");
+        let provider = CssProvider::new();
+        provider.load_from_data(style).unwrap();
+        style_context.add_provider(&provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
     }
     
 }
