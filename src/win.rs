@@ -175,13 +175,6 @@ impl Widget for Win {
 
     }
 
-    fn on_add<W: IsA<gtk::Widget> + IsA<glib::Object>>(&self, _parent: W) {
-
-    }
-
-    fn parent_id() -> Option<&'static str> {
-        None
-    }
     fn run(model_param: Self::ModelParam) -> Result<(), ()>
         where Self: 'static,
     {

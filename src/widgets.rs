@@ -1,11 +1,12 @@
 use glib::{ToValue, Type};
 use gtk::{Box, ToolButton, Button, ButtonExt, ComboBox, ComboBoxExt, Inhibit, Label, LabelExt, RangeExt, Scale, TreeModelExt, WidgetExt, Window};
-use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, 
+use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, DrawingArea,
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt};
 use relm::{Update, Widget, Relm};
 use gdk::{EventKey};
-use chrono::{TimeZone, NaiveDate, NaiveTime, Local, Datelike, Duration};
+use cairo::{Context, LinearGradient, Pattern};
+use chrono::{TimeZone, NaiveDate, NaiveTime, Local, Datelike, Timelike, Duration, DateTime};
 use chrono_tz::{TZ_VARIANTS, Tz};
 
 use self::Msg::*;
@@ -21,6 +22,8 @@ pub struct MainWidgets {
 pub enum Msg {
     SearchContentsChange,
     SearchKeyReleased(EventKey),
+    SearchLostFocus,
+    DrawIllumination(Context),
     RemoveTz,
     LocalTimezoneSelect,
     NotifyParentTimezoneSelectChanged(i32, String),
@@ -50,6 +53,7 @@ pub struct TzSelectorWidgets {
     pub lbl_current_select_time: Label,
     pub txt_search_tz: SearchEntry,
     pub pb_remove_tz: Button,
+    pub draw_illum: DrawingArea,
 }
 
 
@@ -67,39 +71,31 @@ impl TzSelector {
     fn update_time_labels(&self) {
         match &self.model.base_timezone {
             Some(base_zone) => {
-                let local_now = Local::now();
-                let base_start_time = NaiveDate::from_ymd(local_now.date().year(), local_now.month(), local_now.day()).and_hms(0, 0, 0);
-                let base_end_time = NaiveDate::from_ymd(local_now.date().year(), local_now.month(), local_now.day()).and_hms(23, 59, 59);
-                
-                let tz_base: Tz = base_zone.parse().unwrap();
-                let base_start_time_tz = tz_base.from_local_datetime(&base_start_time).unwrap();
-                let base_end_time_tz = tz_base.from_local_datetime(&base_end_time).unwrap();
+                let mut curr_start_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
+                let mut curr_end_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
 
-                let tz_curr: Tz;
-                if let Some(tz) = self.model.this_timezone.clone() {
-                    if tz.len() > 0 {
-                        tz_curr = tz.parse().unwrap();
-                    } else {
-                        return
-                    }
-                } else {
-                    //If no timezone is selected for current control do nothing
+                let (opt_curr_start_time_tz, opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_zone), self.model.this_timezone.clone());
+                
+                if opt_curr_end_time_tz == None || opt_curr_start_time_tz == None {
                     return;
                 }
-                let curr_start_time_tz = base_start_time_tz.with_timezone(&tz_curr);
-                let curr_end_time_tz = base_end_time_tz.with_timezone(&tz_curr);
 
+                if let Some(start_tz) = opt_curr_start_time_tz {
+                    curr_start_time_tz = start_tz; 
+                }
 
-                println!("Now is {} tz_base is {} tz_curr is {}",local_now, base_start_time_tz, curr_start_time_tz);
+                if let Some(end_tz) = opt_curr_end_time_tz {
+                    curr_end_time_tz = end_tz;
+                }
+
+                println!("Start time {} / End time {}", curr_start_time_tz, curr_end_time_tz);
 
                 self.widgets.lbl_start.set_text(format!("{}", curr_start_time_tz.format("%I:%M %P")).as_ref());
                 self.widgets.lbl_end.set_text(format!("{}", curr_end_time_tz.format("%I:%M %P")).as_ref());
 
             },
             None => {
-
             },
-            
         }
     }
 
@@ -153,6 +149,41 @@ impl TzSelector {
     
 }
 
+// Returns start and end DateTimes for the current timezone based off the start and end times of the base timezones
+fn get_current_timezone_range(base_tz: String, this_tz: Option<String>) -> (Option<DateTime<Tz>>, Option<DateTime<Tz>>) {
+    
+    let (base_start_time_tz, base_end_time_tz) = get_base_timezone_range(base_tz.clone());
+
+    let tz_curr: Tz;
+    if let Some(tz) = this_tz.clone() {
+        if tz.len() > 0 {
+            tz_curr = tz.parse().unwrap();
+        } else {
+            return (None, None)
+        }
+    } else {
+        //If no timezone is selected for current control do nothing
+        return (None, None);
+    }
+
+    let curr_start_time_tz = base_start_time_tz.with_timezone(&tz_curr);
+    let curr_end_time_tz = base_end_time_tz.with_timezone(&tz_curr);
+
+    return(Some(curr_start_time_tz), Some(curr_end_time_tz));
+}
+
+fn get_base_timezone_range(base_tz: String) -> (DateTime<Tz>, DateTime<Tz>) {
+    let local_now = Local::now();
+    let base_start_time = NaiveDate::from_ymd(local_now.date().year(), local_now.month(), local_now.day()).and_hms(0, 0, 0);
+    let base_end_time = NaiveDate::from_ymd(local_now.date().year(), local_now.month(), local_now.day()).and_hms(23, 59, 59);
+
+    let tz_base: Tz = base_tz.parse().unwrap();
+    let base_start_time_tz = tz_base.from_local_datetime(&base_start_time).unwrap();
+    let base_end_time_tz = tz_base.from_local_datetime(&base_end_time).unwrap();
+
+    return (base_start_time_tz, base_end_time_tz);
+}
+
 fn get_time_string_from_index(value: f64, start_time: &str) ->String {
     let starting_time: NaiveTime = NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap();
     let offset_dur: Duration = Duration::minutes(value as i64 * 15);
@@ -160,6 +191,76 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
     let ret_string = String::from(format!("{}", calc_time.format("%I:%M %P")));
     return ret_string;
 }
+
+fn calc_offset_for_midday(curr_start_time_tz: DateTime<Tz>) -> f64 {
+    
+    println!("Current Start Time {}", curr_start_time_tz);
+    let midday = NaiveTime::from_hms(12, 0, 0);
+    let nv_curr = NaiveTime::from_hms(curr_start_time_tz.hour(), curr_start_time_tz.minute(), curr_start_time_tz.second());
+    
+    let mut offset = (midday - nv_curr).num_minutes();
+    if offset < 0 {
+        offset = offset + (24 * 60);
+    }
+    
+    let index = ((offset as f64) / 15.0) / 96.0;
+    println!("Index {} Minutes Diff {} Hours Diff {}", index, offset, offset / 60);
+
+    return index as f64;
+}
+
+fn draw_daytime_background(ctx: Context, opt_base_tz: Option<String>, opt_this_tz: Option<String>) -> Inhibit {
+    let mut curr_start_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
+    // let mut curr_end_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
+    let mut base_tz: String = String::from("");
+    // println!("Draw background Base Tz {}, Curr Tz {}", opt_base_tz.clone().unwrap(), opt_this_tz.clone().unwrap());
+    
+    let (x, y, w, h) = ctx.clip_extents();
+
+    if opt_base_tz == None {
+        return Inhibit(false);
+    }
+
+    if let Some(param_base_tz) = opt_base_tz {
+        base_tz = param_base_tz;
+    }
+
+    // let (base_start_time_tz, base_end_time_tz) = get_base_timezone_range(base_tz.clone());
+    let (opt_curr_start_time_tz, _opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_tz), opt_this_tz.clone());
+                
+    if opt_curr_start_time_tz == None {
+        return Inhibit(false);
+    }
+
+    if let Some(start_tz) = opt_curr_start_time_tz {
+        curr_start_time_tz = start_tz;
+    }
+
+    let offset = calc_offset_for_midday(curr_start_time_tz);
+
+    let gr_day = LinearGradient::new(x, y, w, h);
+    gr_day.add_color_stop_rgba(offset - 1.0, 0.98, 0.86, 0.12, 0.5);
+    gr_day.add_color_stop_rgba(offset - 0.5, 0.2, 0.2, 0.2, 0.5);
+    gr_day.add_color_stop_rgba(offset,  0.98, 0.86, 0.12, 0.5);
+    gr_day.add_color_stop_rgba(offset + 0.5, 0.2, 0.2, 0.2, 0.5);
+    gr_day.add_color_stop_rgba(offset + 1.0,  0.98, 0.86, 0.12, 0.5);
+
+    ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
+    unsafe {
+        ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
+    };
+
+    // ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
+    ctx.rectangle(x, y, w, h);
+    // ctx.fill();
+    // ctx.set_source_rgba(0.2, 1.0, 0.2, 1.0);
+    // ctx.arc(x/2.0, y/2.0, h/2.0, 0.0, 90.0 * (3.1414 / 180.0));
+    ctx.fill();
+    return Inhibit(false);
+    
+}
+
+
 
 impl Update for TzSelector {
     
@@ -179,6 +280,14 @@ impl Update for TzSelector {
                     }
                 }
             },
+            SearchLostFocus => {
+                if self.widgets.txt_search_tz.get_text().as_str().len() > 0 {
+                    self.widgets.cmb_tz_name.popup();
+                }
+            },
+            DrawIllumination(ctx) => {
+                ctx.rectangle(1.0, 1.0, 20.0, 10.0);
+            },
             RemoveTz => {
                 self.model.local_relm.stream().emit(Msg::NotifyParentTzSelectorRemoveClicked(self.model.index));
             },
@@ -187,15 +296,12 @@ impl Update for TzSelector {
             },
             LocalTimezoneSelect => {
                 let tz_string: String;
-                if let Some(sel_str) = self.widgets.cmb_tz_name.get_active_id() {
+                if let Some(sel_str) = astself.widgets.cmb_tz_name.get_active_id() {
                     tz_string = String::from(sel_str.as_str());
                 } else {
                     return;
                 }
-                // if self.model.index == 0 {
-                //     self.model.base_timezone = Some(tz_string.clone());
-                // }
-                // let tz_string = format!("{}", self.widgets.cmb_tz_name.get_active_id().unwrap());
+                
                 self.model.this_timezone = Some(tz_string.clone());
                 self.update_time_labels();
                 self.update_time_display();
@@ -276,20 +382,21 @@ impl Widget for TzSelector {
         let lbl_current_select_time: Label = builder_widget.get_object("lbl_current_select_time").expect("Could not get lbl_current_select_time");
         let txt_search_tz: SearchEntry = builder_widget.get_object("txt_search_tz").expect("Could not get txt_search_tz");
         let pb_remove_tz: Button = builder_widget.get_object("pb_remove_tz").expect("Could not get pb_remove_tz");
+        let draw_illum: DrawingArea = builder_widget.get_object("draw_illum").expect("Could not get draw_illum");
 
         connect!(relm, cmb_tz_name, connect_changed(_), Msg::LocalTimezoneSelect);
         connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::LocalTimeSelect(val)), Inhibit(false)));
         connect!(relm, txt_search_tz, connect_search_changed(_), Msg::SearchContentsChange);
         connect!(relm, txt_search_tz, connect_key_release_event(_, key), return (Msg::SearchKeyReleased(key.clone()), Inhibit(false)));
         connect!(relm, pb_remove_tz, connect_clicked(_), Msg::RemoveTz);
-        
-        // slider.connect_format_value( |var, val| {
-        //     return get_time_string_from_index(val, "12:00 am");
-        // });
-        
-        // relm.stream().emit(Msg::SetupCmbListStore);
-        
-        cmb_tz_name.set_model(Some(&model.liststorefilter));
+        connect!(relm, txt_search_tz, connect_focus_out_event(_, _), return(Msg::SearchLostFocus, Inhibit(false)));
+        // connect!(relm, draw_illum, connect_draw(_, ctx), return(Msg::DrawIllumination(ctx.clone()), Inhibit(true)));
+
+        let param_base_timezone = model.base_timezone.clone();
+        let param_current_timezone = model.this_timezone.clone();
+        draw_illum.connect_draw( move |_, ctx| draw_daytime_background(ctx.clone(),param_base_timezone.clone(), param_current_timezone.clone()));
+
+        cmb_tz_name.set_model(Some(&model.liststorefilter.clone()));
 
         let clone_search = txt_search_tz.clone();
         model.liststorefilter.set_visible_func(move |tm: &TreeModel, ti: &TreeIter| {
@@ -327,6 +434,7 @@ impl Widget for TzSelector {
             lbl_current_select_time,
             txt_search_tz,
             pb_remove_tz,
+            draw_illum,
         };
 
         TzSelector {

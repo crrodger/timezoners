@@ -13,6 +13,7 @@ relm-derive = "^0.20.0"
 confy = "0.4.0"
 serde = { version = "1.0", features = ["derive"] }
 gdk = "^0.13.2"
+cairo-rs = "0.9.1"
 glib = "^0"
 chrono = "0.4.18"
 chrono-tz = "0.5.3"
