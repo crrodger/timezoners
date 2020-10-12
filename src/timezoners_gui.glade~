@@ -2,6 +2,74 @@
 <!-- Generated with glade 3.39.0 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
+  <object class="GtkDialog" id="dlg_calendar">
+    <property name="can-focus">False</property>
+    <property name="title" translatable="yes">Select date</property>
+    <property name="type-hint">dialog</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can-focus">False</property>
+            <property name="layout-style">end</property>
+            <child>
+              <object class="GtkButton" id="pb_dlg_cal_ok">
+                <property name="label">gtk-apply</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="use-stock">True</property>
+                <property name="always-show-image">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="pb_dlg_cal_cancel">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="use-stock">True</property>
+                <property name="always-show-image">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkCalendar" id="cal_date">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="year">2020</property>
+            <property name="month">9</property>
+            <property name="day">13</property>
+            <property name="show-week-numbers">True</property>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
   <object class="GtkApplicationWindow" id="main_window">
     <property name="can-focus">False</property>
     <property name="title" translatable="yes">TimezoneRS</property>
@@ -184,6 +252,19 @@
                 <property name="label" translatable="yes">Add</property>
                 <property name="use-underline">True</property>
                 <property name="stock-id">gtk-add</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="tb_btn_sel_cal">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">Date</property>
+                <property name="use-underline">True</property>
+                <property name="icon-name">x-office-calendar</property>
               </object>
               <packing>
                 <property name="expand">False</property>

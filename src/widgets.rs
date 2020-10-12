@@ -2,7 +2,8 @@ use glib::{ToValue, Type};
 use gtk::{Box, ToolButton, Button, ButtonExt, ComboBox, ComboBoxExt, Inhibit, Label, LabelExt, RangeExt, Scale, TreeModelExt, WidgetExt, Window};
 use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, DrawingArea,
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
-            CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt};
+            CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt,
+            Dialog, Calendar};
 use relm::{Update, Widget, Relm, DrawHandler};
 use gdk::{EventKey};
 use cairo::{LinearGradient, Pattern};
@@ -16,6 +17,11 @@ pub struct MainWidgets {
     pub tz_box: Box,
     pub window: Window,
     pub tb_btn_add_tz: ToolButton,
+    pub tb_btn_sel_cal: ToolButton,
+    pub dlg_calendar: Dialog,
+    pub cal_date: Calendar,
+    pub pb_dlg_cal_ok: Button,
+    pub pb_dlg_cal_cancel: Button,
 }
 
 #[derive(Clone, Msg)]
@@ -33,9 +39,11 @@ pub enum Msg {
     NotifyParentTzSelectorRemoveClicked(i32),
     FromParentBaseTimeSelectChanged(f64),
     FromParentBaseTimezoneChanged(Option<String>),
+    FromParentDateChanged(NaiveDate),
 }
 pub struct TzSelectorModel {
     index: i32,
+    for_date: NaiveDate,
     base_timezone: Option<String>,
     this_timezone: Option<String>,
     local_relm: Relm<TzSelector>,
@@ -72,10 +80,13 @@ impl TzSelector {
     fn update_time_labels(&self) {
         match &self.model.base_timezone {
             Some(base_zone) => {
-                let mut curr_start_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
-                let mut curr_end_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
+                
+                let mut curr_start_time_tz: DateTime<Tz> = Local.from_local_date(&self.model.for_date).earliest().unwrap().and_hms(12, 0, 0).with_timezone(&Tz::UTC);
+                let mut curr_end_time_tz: DateTime<Tz> = Local.from_local_date(&self.model.for_date).earliest().unwrap().and_hms(12, 0, 0).with_timezone(&Tz::UTC);
+                // let mut curr_start_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
+                // let mut curr_end_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
 
-                let (opt_curr_start_time_tz, opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_zone), self.model.this_timezone.clone());
+                let (opt_curr_start_time_tz, opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_zone), self.model.this_timezone.clone(), self.model.for_date);
                 
                 if opt_curr_end_time_tz == None || opt_curr_start_time_tz == None {
                     return;
@@ -164,7 +175,7 @@ impl TzSelector {
             base_tz = param_base_tz.as_str();
         }
     
-        let (opt_curr_start_time_tz, _opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_tz), self.model.this_timezone.clone());
+        let (opt_curr_start_time_tz, _opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_tz), self.model.this_timezone.clone(), self.model.for_date);
                     
         if opt_curr_start_time_tz == None {
             return;
@@ -201,9 +212,9 @@ impl TzSelector {
 }
 
 // Returns start and end DateTimes for the current timezone based off the start and end times of the base timezones
-fn get_current_timezone_range(base_tz: String, this_tz: Option<String>) -> (Option<DateTime<Tz>>, Option<DateTime<Tz>>) {
+fn get_current_timezone_range(base_tz: String, this_tz: Option<String>, for_date: NaiveDate) -> (Option<DateTime<Tz>>, Option<DateTime<Tz>>) {
     
-    let (base_start_time_tz, base_end_time_tz) = get_base_timezone_range(base_tz.clone());
+    let (base_start_time_tz, base_end_time_tz) = get_base_timezone_range(base_tz.clone(), for_date);
 
     let tz_curr: Tz;
     if let Some(tz) = this_tz.clone() {
@@ -223,10 +234,10 @@ fn get_current_timezone_range(base_tz: String, this_tz: Option<String>) -> (Opti
     return(Some(curr_start_time_tz), Some(curr_end_time_tz));
 }
 
-fn get_base_timezone_range(base_tz: String) -> (DateTime<Tz>, DateTime<Tz>) {
-    let local_now = Local::now();
-    let base_start_time = NaiveDate::from_ymd(local_now.date().year(), local_now.month(), local_now.day()).and_hms(0, 0, 0);
-    let base_end_time = NaiveDate::from_ymd(local_now.date().year(), local_now.month(), local_now.day()).and_hms(23, 59, 59);
+fn get_base_timezone_range(base_tz: String, for_date: NaiveDate) -> (DateTime<Tz>, DateTime<Tz>) {
+    
+    let base_start_time = NaiveDate::from_ymd(for_date.year(), for_date.month(), for_date.day()).and_hms(0, 0, 0);
+    let base_end_time = NaiveDate::from_ymd(for_date.year(), for_date.month(), for_date.day()).and_hms(23, 59, 59);
 
     let tz_base: Tz = base_tz.parse().unwrap();
     let base_start_time_tz = tz_base.from_local_datetime(&base_start_time).unwrap();
@@ -263,7 +274,7 @@ fn calc_offset_for_midday(curr_start_time_tz: DateTime<Tz>) -> f64 {
 impl Update for TzSelector {
     
     type Model = TzSelectorModel;
-    type ModelParam = (i32, Option<String>, Option<String>);
+    type ModelParam = (i32, Option<String>, Option<String>, NaiveDate);
     type Msg = Msg;
     
     fn update(&mut self, event: Msg) {
@@ -334,6 +345,11 @@ impl Update for TzSelector {
                 self.widgets.slider.set_value(new_time);
                 self.update_time_display();
             },
+            FromParentDateChanged(new_date) => {
+                self.model.for_date = new_date;
+                self.update_time_labels();
+                self.update_time_display();
+            }
         }
     }
 
@@ -342,6 +358,7 @@ impl Update for TzSelector {
         let index = param.0;
         let base_timezone = param.1;
         let this_timezone = param.2;
+        let for_date = param.3;
         let liststore = ListStore::new(&[
             Type::String,
         ]);
@@ -351,6 +368,7 @@ impl Update for TzSelector {
 
         TzSelectorModel {
             index,
+            for_date,
             base_timezone,
             this_timezone,
             local_relm,

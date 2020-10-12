@@ -1,8 +1,9 @@
 use relm::{Relm, Update, Widget, Channel};
 use gtk::prelude::*;
 use gtk::{Window, Builder, Box, 
-    MenuItem, ToolButton,
+    MenuItem, ToolButton, Dialog, Button, Calendar,
 };
+use chrono::{NaiveDate, Local, Datelike};
 use crate::relm::ContainerWidget;
 use crate::model::*;
 use crate::widgets::{MainWidgets, *};
@@ -27,6 +28,8 @@ impl Update for Win {
             // We send a message to the current widget.
             stream.emit(Msg::ProcessUpdateMsg(upd_tuple));
         });
+        let local_now = Local::now();
+        let for_date = NaiveDate::from_ymd(local_now.year(), local_now.month(), local_now.day());
 
         Model {
             tz_ctrls: vec![],
@@ -34,6 +37,7 @@ impl Update for Win {
             sender,
             local_relm: relm.clone(),
             base_tz: None,
+            for_date,
         }
     }
 
@@ -61,6 +65,23 @@ impl Update for Win {
             },
             AddTzSelector(tz_location) => {
                 self.add_tz_selector(tz_location);
+            },
+            SelectDate => {
+                self.widgets.cal_date.select_month(self.model.for_date.month()-1, self.model.for_date.year() as u32);
+                self.widgets.cal_date.select_day(self.model.for_date.day());
+                self.widgets.dlg_calendar.show_all();
+            },
+            DateOkay => {
+                let (y,m,d) = self.widgets.cal_date.get_date();
+                self.model.for_date = NaiveDate::from_ymd(y as i32, m + 1, d);
+                self.widgets.dlg_calendar.hide();
+                self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("%Y/%m/%d")).as_ref()));
+                for i in 1..self.model.tz_ctrls.len() {
+                    self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentDateChanged(self.model.for_date));
+                };
+            },
+            DateCancel => {
+                self.widgets.dlg_calendar.hide();
             },
             //Messages from child components
             TimezoneSelectChanged(index, new_zone) => {
@@ -126,8 +147,16 @@ impl Widget for Win {
         // let time_ctrl: Window = builder.get_object("widget_tz_control").expect("Could not get time control window");
         let tz_box: Box = builder_main.get_object("box_widgets").expect("Could not get the widgets box");
         let tb_btn_add_tz: ToolButton = builder_main.get_object("tb_btn_add_tz").expect("Could not get tb_btn_add_tz");
+        let tb_btn_sel_cal: ToolButton = builder_main.get_object("tb_btn_sel_cal").expect("Could not geto tb_btn_sel_cal");
         
-        let first_selector = tz_box.add_widget::<TzSelector>((0, base_tz.clone(), base_tz.clone()));
+        let dlg_calendar: Dialog = builder_main.get_object("dlg_calendar").expect("Could not get dialog dlg_calendar");
+        let cal_date: Calendar = builder_main.get_object("cal_date").expect("Could not get cal_date");
+        let pb_dlg_cal_ok: Button = builder_main.get_object("pb_dlg_cal_ok").expect("Could not get button pb_dlg_cal_ok");
+        let pb_dlg_cal_cancel: Button = builder_main.get_object("pb_dlg_cal_cancel").expect("Could not get button pb_dlg_cal_cancel");
+        
+
+
+        let first_selector = tz_box.add_widget::<TzSelector>((0, base_tz.clone(), base_tz.clone(), model.for_date.clone()));
         // first_selector.set_index(0);
         connect!(first_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
         connect!(first_selector@crate::widgets::Msg::NotifyParentTimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
@@ -142,6 +171,9 @@ impl Widget for Win {
         // connect!(relm, window, connect_show(_), Msg::SetupTree);
         connect!(relm, menu_item_quit, connect_activate(_), Msg::Quit);
         connect!(relm, tb_btn_add_tz, connect_clicked(_), Msg::AddTzSelector(String::from("")));
+        connect!(relm, tb_btn_sel_cal, connect_clicked(_), Msg::SelectDate);
+        connect!(relm, pb_dlg_cal_ok, connect_clicked(_), Msg::DateOkay);
+        connect!(relm, pb_dlg_cal_cancel, connect_clicked(_), Msg::DateCancel);
         
         window.show_all();
         window.move_(config.win_pos_x, config.win_pos_y);
@@ -151,6 +183,11 @@ impl Widget for Win {
             tz_box,
             window,
             tb_btn_add_tz,
+            tb_btn_sel_cal,
+            dlg_calendar,
+            cal_date,
+            pb_dlg_cal_ok,
+            pb_dlg_cal_cancel
         };
 
         Win {
@@ -171,6 +208,8 @@ impl Widget for Win {
             }
         }
 
+        self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("%Y/%m/%d")).as_ref()));
+
         
 
     }
@@ -185,7 +224,7 @@ impl Widget for Win {
 
 impl Win {
     fn add_tz_selector(&mut self, tz_location: String) {
-        let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), Some(tz_location.clone())));
+        let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), Some(tz_location.clone()), self.model.for_date.clone()));
         connect!(new_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
         connect!(new_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), self.model.local_relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
         self.model.tz_ctrls.push(new_selector);

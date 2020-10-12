@@ -1,5 +1,6 @@
 // use gtk::{ListStore, TreeModelFilter};
 use relm::{Sender, Component, Relm};
+use chrono::{NaiveDate};
 use crate::widgets::*;
 use serde::{Serialize, Deserialize};
 use crate::{win::Win, app::MsgUpdateType};
@@ -11,6 +12,7 @@ pub struct Model {
     pub sender: Sender<(MsgUpdateType, String)>, 
     pub local_relm: Relm<Win>,
     pub base_tz: Option<String>,
+    pub for_date: NaiveDate,
 }
 
 #[derive(Serialize, Deserialize)]
