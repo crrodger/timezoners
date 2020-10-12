@@ -175,7 +175,7 @@ impl TzSelector {
         }
     
         let offset = calc_offset_for_midday(curr_start_time_tz);
-    
+        
         let gr_day = LinearGradient::new(x, y, w, h);
         gr_day.add_color_stop_rgba(offset - 1.0, 0.98, 0.86, 0.12, 0.5);
         gr_day.add_color_stop_rgba(offset - 0.5, 0.2, 0.2, 0.2, 0.5);
@@ -183,10 +183,12 @@ impl TzSelector {
         gr_day.add_color_stop_rgba(offset + 0.5, 0.2, 0.2, 0.2, 0.5);
         gr_day.add_color_stop_rgba(offset + 1.0,  0.98, 0.86, 0.12, 0.5);
     
-        ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
+        // ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
+        
         unsafe {
             ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
         };
+        ctx.paint();
     
         // ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
         // ctx.rectangle(x, y, w, h);
