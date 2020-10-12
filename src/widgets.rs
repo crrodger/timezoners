@@ -303,6 +303,7 @@ impl Update for TzSelector {
                 self.model.this_timezone = Some(tz_string.clone());
                 self.update_time_labels();
                 self.update_time_display();
+                self.widgets.txt_search_tz.set_text("");
                 //Caught by parent win update loop
                 self.model.local_relm.stream().emit(Msg::NotifyParentTimezoneSelectChanged(self.model.index, tz_string.clone()));
                 if self.model.index == 0 {
@@ -398,11 +399,11 @@ impl Widget for TzSelector {
         model.liststorefilter.set_visible_func(move |tm: &TreeModel, ti: &TreeIter| {
             if clone_search.get_text_length() > 0 {
                 
-                let match_chars = clone_search.get_text();
+                let match_chars = clone_search.get_text().to_lowercase();
 
                 match tm.get_value(ti, 0).get::<String>().unwrap() {
                     Some(str_col_value) => {
-                        if str_col_value.contains(match_chars.as_str()) {
+                        if str_col_value.to_lowercase().contains(match_chars.as_str()) {
                                 return true;
                             } else {
                                 return false;
