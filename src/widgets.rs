@@ -3,9 +3,9 @@ use gtk::{Box, ToolButton, Button, ButtonExt, ComboBox, ComboBoxExt, Inhibit, La
 use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, DrawingArea,
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt};
-use relm::{Update, Widget, Relm};
+use relm::{Update, Widget, Relm, DrawHandler};
 use gdk::{EventKey};
-use cairo::{Context, LinearGradient, Pattern};
+use cairo::{LinearGradient, Pattern};
 use chrono::{TimeZone, NaiveDate, NaiveTime, Local, Datelike, Timelike, Duration, DateTime};
 use chrono_tz::{TZ_VARIANTS, Tz};
 
@@ -23,7 +23,7 @@ pub enum Msg {
     SearchContentsChange,
     SearchKeyReleased(EventKey),
     SearchLostFocus,
-    DrawIllumination(Context),
+    DrawIllumination,
     RemoveTz,
     LocalTimezoneSelect,
     NotifyParentTimezoneSelectChanged(i32, String),
@@ -39,6 +39,7 @@ pub struct TzSelectorModel {
     base_timezone: Option<String>,
     this_timezone: Option<String>,
     local_relm: Relm<TzSelector>,
+    draw_handler: DrawHandler<DrawingArea>,
     pub liststore: ListStore,
     pub liststorefilter: TreeModelFilter,
 }
@@ -147,6 +148,54 @@ impl TzSelector {
         self.widgets.cmb_tz_name.set_id_column(0);
     }
     
+    fn draw_daytime_background(&mut self) {
+        let ctx = self.model.draw_handler.get_context();
+        let mut curr_start_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
+        let mut base_tz: &str = "";
+        // println!("Draw background Base Tz {}, Curr Tz {}", opt_base_tz.clone().unwrap(), opt_this_tz.clone().unwrap());
+        
+        let (x, y, w, h) = ctx.clip_extents();
+    
+        if self.model.base_timezone == None {
+            return;
+        }
+    
+        if let Some(param_base_tz) = &self.model.base_timezone {
+            base_tz = param_base_tz.as_str();
+        }
+    
+        let (opt_curr_start_time_tz, _opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_tz), self.model.this_timezone.clone());
+                    
+        if opt_curr_start_time_tz == None {
+            return;
+        }
+    
+        if let Some(start_tz) = opt_curr_start_time_tz {
+            curr_start_time_tz = start_tz;
+        }
+    
+        let offset = calc_offset_for_midday(curr_start_time_tz);
+    
+        let gr_day = LinearGradient::new(x, y, w, h);
+        gr_day.add_color_stop_rgba(offset - 1.0, 0.98, 0.86, 0.12, 0.5);
+        gr_day.add_color_stop_rgba(offset - 0.5, 0.2, 0.2, 0.2, 0.5);
+        gr_day.add_color_stop_rgba(offset,  0.98, 0.86, 0.12, 0.5);
+        gr_day.add_color_stop_rgba(offset + 0.5, 0.2, 0.2, 0.2, 0.5);
+        gr_day.add_color_stop_rgba(offset + 1.0,  0.98, 0.86, 0.12, 0.5);
+    
+        ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
+        unsafe {
+            ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
+        };
+    
+        // ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
+        // ctx.rectangle(x, y, w, h);
+        // ctx.fill();
+        // ctx.set_source_rgba(0.2, 1.0, 0.2, 1.0);
+        // ctx.arc(x/2.0, y/2.0, h/2.0, 0.0, 90.0 * (3.1414 / 180.0));
+        ctx.fill();
+        
+    }
 }
 
 // Returns start and end DateTimes for the current timezone based off the start and end times of the base timezones
@@ -209,59 +258,6 @@ fn calc_offset_for_midday(curr_start_time_tz: DateTime<Tz>) -> f64 {
     return index as f64;
 }
 
-fn draw_daytime_background(ctx: Context, opt_base_tz: Option<String>, opt_this_tz: Option<String>) -> Inhibit {
-    let mut curr_start_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
-    // let mut curr_end_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
-    let mut base_tz: String = String::from("");
-    // println!("Draw background Base Tz {}, Curr Tz {}", opt_base_tz.clone().unwrap(), opt_this_tz.clone().unwrap());
-    
-    let (x, y, w, h) = ctx.clip_extents();
-
-    if opt_base_tz == None {
-        return Inhibit(false);
-    }
-
-    if let Some(param_base_tz) = opt_base_tz {
-        base_tz = param_base_tz;
-    }
-
-    // let (base_start_time_tz, base_end_time_tz) = get_base_timezone_range(base_tz.clone());
-    let (opt_curr_start_time_tz, _opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_tz), opt_this_tz.clone());
-                
-    if opt_curr_start_time_tz == None {
-        return Inhibit(false);
-    }
-
-    if let Some(start_tz) = opt_curr_start_time_tz {
-        curr_start_time_tz = start_tz;
-    }
-
-    let offset = calc_offset_for_midday(curr_start_time_tz);
-
-    let gr_day = LinearGradient::new(x, y, w, h);
-    gr_day.add_color_stop_rgba(offset - 1.0, 0.98, 0.86, 0.12, 0.5);
-    gr_day.add_color_stop_rgba(offset - 0.5, 0.2, 0.2, 0.2, 0.5);
-    gr_day.add_color_stop_rgba(offset,  0.98, 0.86, 0.12, 0.5);
-    gr_day.add_color_stop_rgba(offset + 0.5, 0.2, 0.2, 0.2, 0.5);
-    gr_day.add_color_stop_rgba(offset + 1.0,  0.98, 0.86, 0.12, 0.5);
-
-    ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
-    unsafe {
-        ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
-    };
-
-    // ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
-    ctx.rectangle(x, y, w, h);
-    // ctx.fill();
-    // ctx.set_source_rgba(0.2, 1.0, 0.2, 1.0);
-    // ctx.arc(x/2.0, y/2.0, h/2.0, 0.0, 90.0 * (3.1414 / 180.0));
-    ctx.fill();
-    return Inhibit(false);
-    
-}
-
-
-
 impl Update for TzSelector {
     
     type Model = TzSelectorModel;
@@ -285,8 +281,8 @@ impl Update for TzSelector {
                     self.widgets.cmb_tz_name.popup();
                 }
             },
-            DrawIllumination(ctx) => {
-                ctx.rectangle(1.0, 1.0, 20.0, 10.0);
+            DrawIllumination => {
+                self.draw_daytime_background();
             },
             RemoveTz => {
                 self.model.local_relm.stream().emit(Msg::NotifyParentTzSelectorRemoveClicked(self.model.index));
@@ -296,12 +292,12 @@ impl Update for TzSelector {
             },
             LocalTimezoneSelect => {
                 let tz_string: String;
-                if let Some(sel_str) = astself.widgets.cmb_tz_name.get_active_id() {
+                if let Some(sel_str) = self.widgets.cmb_tz_name.get_active_id() {
                     tz_string = String::from(sel_str.as_str());
                 } else {
                     return;
                 }
-                
+
                 self.model.this_timezone = Some(tz_string.clone());
                 self.update_time_labels();
                 self.update_time_display();
@@ -348,6 +344,7 @@ impl Update for TzSelector {
         ]);
         
         let liststorefilter = TreeModelFilter::new(&liststore, None); //Probably need a TreePath for a tree not a list like I am using here
+        let draw_handler = DrawHandler::new().expect("draw handler");
 
         TzSelectorModel {
             index,
@@ -356,6 +353,7 @@ impl Update for TzSelector {
             local_relm,
             liststore,
             liststorefilter,
+            draw_handler,
         }
     }
 }
@@ -389,12 +387,8 @@ impl Widget for TzSelector {
         connect!(relm, txt_search_tz, connect_search_changed(_), Msg::SearchContentsChange);
         connect!(relm, txt_search_tz, connect_key_release_event(_, key), return (Msg::SearchKeyReleased(key.clone()), Inhibit(false)));
         connect!(relm, pb_remove_tz, connect_clicked(_), Msg::RemoveTz);
-        connect!(relm, txt_search_tz, connect_focus_out_event(_, _), return(Msg::SearchLostFocus, Inhibit(false)));
-        // connect!(relm, draw_illum, connect_draw(_, ctx), return(Msg::DrawIllumination(ctx.clone()), Inhibit(true)));
-
-        let param_base_timezone = model.base_timezone.clone();
-        let param_current_timezone = model.this_timezone.clone();
-        draw_illum.connect_draw( move |_, ctx| draw_daytime_background(ctx.clone(),param_base_timezone.clone(), param_current_timezone.clone()));
+        connect!(relm, txt_search_tz, connect_focus_out_event(_, _), return(Msg::SearchLostFocus, Inhibit(true)));
+        connect!(relm, draw_illum, connect_draw(_, _), return(Msg::DrawIllumination, Inhibit(false)));
 
         cmb_tz_name.set_model(Some(&model.liststorefilter.clone()));
 
@@ -418,7 +412,6 @@ impl Widget for TzSelector {
                 true
             }
         });
-
 
         //The component is loaded inside of a window, need to remove this link
         box_root.unparent();
@@ -451,6 +444,8 @@ impl Widget for TzSelector {
         }
         self.setup_cmb_liststore();
         self.add_timezone_strings();
+        self.model.draw_handler.init(&self.widgets.draw_illum);
+
         match self.model.this_timezone.clone() {
             Some(tz_string) => {
                 self.widgets.cmb_tz_name.set_active_id(Some(tz_string.clone().as_ref()));
@@ -465,13 +460,4 @@ impl Widget for TzSelector {
         provider.load_from_data(style).unwrap();
         style_context.add_provider(&provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
     }
-    
 }
-
-// impl IsA<dyn Widget> for TzSelector {
-//     type Model = TzSelectorModel;
-//     type ModelParam = i32;
-//     type Msg = Msg;
-
-
-// }
