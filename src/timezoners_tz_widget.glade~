@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.39.0 -->
+<!-- Generated with glade 3.38.1 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <object class="GtkAdjustment" id="tz_scale_adj">
@@ -14,6 +14,9 @@
       <object class="GtkBox" id="box_widget_main">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
+        <property name="margin-top">2</property>
+        <property name="margin-bottom">2</property>
+        <property name="border-width">3</property>
         <child>
           <object class="GtkBox">
             <property name="visible">True</property>
@@ -43,7 +46,6 @@
                 <property name="can-focus">False</property>
                 <property name="halign">baseline</property>
                 <property name="hexpand">False</property>
-                <property name="popup-fixed-width">False</property>
                 <style>
                   <class name="cmb-tz-name"/>
                 </style>
@@ -196,6 +198,9 @@
             <property name="position">1</property>
           </packing>
         </child>
+        <style>
+          <class name="box-full-widget"/>
+        </style>
       </object>
     </child>
   </object>

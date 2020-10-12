@@ -1,7 +1,7 @@
 use relm::{Relm, Update, Widget, Channel};
 use gtk::prelude::*;
 use gtk::{Window, Builder, Box, 
-    MenuItem, ToolButton, Dialog, Button, Calendar,
+    MenuItem, ToolButton, Dialog, Button, Calendar, STYLE_PROVIDER_PRIORITY_APPLICATION, CssProvider,
 };
 use chrono::{NaiveDate, Local, Datelike};
 use crate::relm::ContainerWidget;
@@ -210,6 +210,14 @@ impl Widget for Win {
 
         self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("%Y/%m/%d")).as_ref()));
 
+        let style_context = self.widgets.tz_box.get_style_context();
+        // TODO: remove the next line when relm supports css.
+        let style = include_bytes!("styling.css");
+        let provider = CssProvider::new();
+        provider.load_from_data(style).unwrap();
+        style_context.add_provider(&provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+        self.widgets.tz_box.set_border_width(3);
         
 
     }

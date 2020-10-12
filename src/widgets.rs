@@ -3,7 +3,7 @@ use gtk::{Box, ToolButton, Button, ButtonExt, ComboBox, ComboBoxExt, Inhibit, La
 use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, DrawingArea,
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt,
-            Dialog, Calendar};
+            Dialog, Calendar, ContainerExt};
 use relm::{Update, Widget, Relm, DrawHandler};
 use gdk::{EventKey};
 use cairo::{LinearGradient, Pattern};
@@ -480,5 +480,14 @@ impl Widget for TzSelector {
         let provider = CssProvider::new();
         provider.load_from_data(style).unwrap();
         style_context.add_provider(&provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+        let style_context = self.widgets.box_root.get_style_context();
+        // TODO: remove the next line when relm supports css.
+        let style = include_bytes!("styling.css");
+        let provider = CssProvider::new();
+        provider.load_from_data(style).unwrap();
+        style_context.add_provider(&provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
+
+        // self.widgets.box_root.set_border_width(3);
     }
 }
