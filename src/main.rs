@@ -16,6 +16,7 @@ mod config;
 mod win;
 mod model;
 mod widgets;
+mod tzselector;
 
 fn main() {
     App::new();

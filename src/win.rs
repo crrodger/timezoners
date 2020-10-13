@@ -6,7 +6,8 @@ use gtk::{Window, Builder, Box,
 use chrono::{NaiveDate, Local, Datelike};
 use crate::relm::ContainerWidget;
 use crate::model::*;
-use crate::widgets::{MainWidgets, *};
+use crate::widgets::MainWidgets;
+use crate::tzselector::*;
 use crate::app::{Msg, MsgUpdateType};
 
 pub struct Win {
@@ -77,7 +78,7 @@ impl Update for Win {
                 self.widgets.dlg_calendar.hide();
                 self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("%Y/%m/%d")).as_ref()));
                 for i in 1..self.model.tz_ctrls.len() {
-                    self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentDateChanged(self.model.for_date));
+                    self.model.tz_ctrls[i].emit(crate::tzselector::Msg::FromParentDateChanged(self.model.for_date));
                 };
             },
             DateCancel => {
@@ -87,12 +88,12 @@ impl Update for Win {
             TimezoneSelectChanged(index, new_zone) => {
                 self.model.tz_zones[index as usize] = Some(new_zone);
                 // for i in 0..self.model.tz_ctrls.len() {
-                //     self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentBaseTimezoneChanged(format!("{}", new_zone)));
+                //     self.model.tz_ctrls[i].emit(crate::tzselector::Msg::FromParentBaseTimezoneChanged(format!("{}", new_zone)));
                 // }
             },
             TimeSelectChanged(new_time) => {
                 for i in 0..self.model.tz_ctrls.len() {
-                    self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentBaseTimeSelectChanged(new_time));
+                    self.model.tz_ctrls[i].emit(crate::tzselector::Msg::FromParentBaseTimeSelectChanged(new_time));
                 }
             },
             TimezoneRemove(remove_index) => {
@@ -105,7 +106,7 @@ impl Update for Win {
             ChangeBaseTimezone(new_zone) => {
                 self.model.base_tz = new_zone.clone();
                 for i in 1..self.model.tz_ctrls.len() {
-                    self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentBaseTimezoneChanged(new_zone.clone()));
+                    self.model.tz_ctrls[i].emit(crate::tzselector::Msg::FromParentBaseTimezoneChanged(new_zone.clone()));
                 }
             },
         }
@@ -158,11 +159,11 @@ impl Widget for Win {
 
         let first_selector = tz_box.add_widget::<TzSelector>((0, base_tz.clone(), base_tz.clone(), model.for_date.clone()));
         // first_selector.set_index(0);
-        connect!(first_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
-        connect!(first_selector@crate::widgets::Msg::NotifyParentTimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
-        connect!(first_selector@crate::widgets::Msg::NotifyParentBaseTzChanged(ref new_zone), relm, Msg::ChangeBaseTimezone(Some(new_zone.clone())));
+        connect!(first_selector@crate::tzselector::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
+        connect!(first_selector@crate::tzselector::Msg::NotifyParentTimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
+        connect!(first_selector@crate::tzselector::Msg::NotifyParentBaseTzChanged(ref new_zone), relm, Msg::ChangeBaseTimezone(Some(new_zone.clone())));
         
-        // connect!(second_selector@crate::widgets::Msg::TimezoneSelectChanged, relm, Msg::TimezoneSelectChanged);
+        // connect!(second_selector@crate::tzselector::Msg::TimezoneSelectChanged, relm, Msg::TimezoneSelectChanged);
         
         model.tz_ctrls.push(first_selector);
         model.tz_zones.push(base_tz);
@@ -233,9 +234,9 @@ impl Widget for Win {
 impl Win {
     fn add_tz_selector(&mut self, tz_location: String) {
         let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), Some(tz_location.clone()), self.model.for_date.clone()));
-        connect!(new_selector@crate::widgets::Msg::NotifyParentTimeSelectChanged(new_time), self.model.local_relm, Msg::TimeSelectChanged(new_time));
-        connect!(new_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
-        connect!(new_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), self.model.local_relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
+        connect!(new_selector@crate::tzselector::Msg::NotifyParentTimeSelectChanged(new_time), self.model.local_relm, Msg::TimeSelectChanged(new_time));
+        connect!(new_selector@crate::tzselector::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
+        connect!(new_selector@crate::tzselector::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), self.model.local_relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
         self.model.tz_ctrls.push(new_selector);
         self.model.tz_zones.push(Some(tz_location));
     }

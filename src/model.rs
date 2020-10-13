@@ -1,7 +1,7 @@
 // use gtk::{ListStore, TreeModelFilter};
 use relm::{Sender, Component, Relm};
 use chrono::{NaiveDate};
-use crate::widgets::*;
+use crate::tzselector::*;
 use serde::{Serialize, Deserialize};
 use crate::{win::Win, app::MsgUpdateType};
 
