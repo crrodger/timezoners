@@ -16,3 +16,8 @@ box.box-full-widget {
     border-color: darkgrey;
 }
 
+label.tz-time-label {
+    font-size: 14px;
+    font-weight: bold;
+    font-style: italic;
+}

@@ -14,8 +14,6 @@
       <object class="GtkBox" id="box_widget_main">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
-        <property name="margin-top">2</property>
-        <property name="margin-bottom">2</property>
         <property name="border-width">3</property>
         <child>
           <object class="GtkBox">

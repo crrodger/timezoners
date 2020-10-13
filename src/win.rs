@@ -91,7 +91,7 @@ impl Update for Win {
                 // }
             },
             TimeSelectChanged(new_time) => {
-                for i in 1..self.model.tz_ctrls.len() {
+                for i in 0..self.model.tz_ctrls.len() {
                     self.model.tz_ctrls[i].emit(crate::widgets::Msg::FromParentBaseTimeSelectChanged(new_time));
                 }
             },
@@ -233,6 +233,7 @@ impl Widget for Win {
 impl Win {
     fn add_tz_selector(&mut self, tz_location: String) {
         let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), Some(tz_location.clone()), self.model.for_date.clone()));
+        connect!(new_selector@crate::widgets::Msg::NotifyParentTimeSelectChanged(new_time), self.model.local_relm, Msg::TimeSelectChanged(new_time));
         connect!(new_selector@crate::widgets::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
         connect!(new_selector@crate::widgets::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), self.model.local_relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
         self.model.tz_ctrls.push(new_selector);

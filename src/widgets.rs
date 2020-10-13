@@ -3,7 +3,7 @@ use gtk::{Box, ToolButton, Button, ButtonExt, ComboBox, ComboBoxExt, Inhibit, La
 use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, DrawingArea,
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt,
-            Dialog, Calendar, ContainerExt};
+            Dialog, Calendar};
 use relm::{Update, Widget, Relm, DrawHandler};
 use gdk::{EventKey};
 use cairo::{LinearGradient, Pattern};
@@ -83,8 +83,6 @@ impl TzSelector {
                 
                 let mut curr_start_time_tz: DateTime<Tz> = Local.from_local_date(&self.model.for_date).earliest().unwrap().and_hms(12, 0, 0).with_timezone(&Tz::UTC);
                 let mut curr_end_time_tz: DateTime<Tz> = Local.from_local_date(&self.model.for_date).earliest().unwrap().and_hms(12, 0, 0).with_timezone(&Tz::UTC);
-                // let mut curr_start_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
-                // let mut curr_end_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
 
                 let (opt_curr_start_time_tz, opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_zone), self.model.this_timezone.clone(), self.model.for_date);
                 
@@ -322,7 +320,6 @@ impl Update for TzSelector {
                 }
             },
             LocalTimeSelect(value) => {
-                // println!("Value {}", value);
                 self.model.local_relm.stream().emit(Msg::NotifyParentTimeSelectChanged(value.round()));
                 self.update_time_display();
             },
@@ -488,6 +485,12 @@ impl Widget for TzSelector {
         provider.load_from_data(style).unwrap();
         style_context.add_provider(&provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-        // self.widgets.box_root.set_border_width(3);
+        let style_context = self.widgets.lbl_current_select_time.get_style_context();
+        // TODO: remove the next line when relm supports css.
+        let style = include_bytes!("styling.css");
+        let provider = CssProvider::new();
+        provider.load_from_data(style).unwrap();
+        style_context.add_provider(&provider, STYLE_PROVIDER_PRIORITY_APPLICATION);
+
     }
 }

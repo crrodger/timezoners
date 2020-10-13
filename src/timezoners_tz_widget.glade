@@ -92,6 +92,9 @@
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">12:00 pm</property>
+                        <style>
+                          <class name="tz-time-label"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">True</property>
