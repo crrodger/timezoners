@@ -261,15 +261,29 @@ fn get_base_timezone_range(base_tz: String, for_date: NaiveDate) -> (DateTime<Tz
 }
 
 fn get_time_string_from_index(value: f64, start_time: &str) ->String {
-    let starting_time = if start_time.contains("*") {
-        NaiveTime::parse_from_str(&start_time[2..], "%I:%M %P").unwrap()
+    let (starting_time, prev_day) = if start_time.contains("*") {
+        (NaiveTime::parse_from_str(&start_time[2..], "%I:%M %P").unwrap(), true)
     } else {
-        NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap()
+        (NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap(), false)
     };
     // let starting_time: NaiveTime = NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap();
     let offset_dur: Duration = Duration::minutes(value as i64 * 15);
-    let calc_time = starting_time + offset_dur;
-    let ret_string = String::from(format!("{}", calc_time.format("%I:%M %P")));
+    let calc_time: NaiveTime = starting_time + offset_dur;
+    
+    let check_still_prevday = (starting_time.hour() as i64 - 24) as i64 + offset_dur.num_hours();
+    let check_next_day = (starting_time.hour() as i64 - 24) as i64 + offset_dur.num_hours();
+    let ret_string = if prev_day && check_still_prevday < 0 {
+        String::from(format!("{}", calc_time.format("<= %I:%M %P")))
+    } else {
+        if !prev_day && check_next_day >= 0 {
+            String::from(format!("{}", calc_time.format("%I:%M %P =>")))
+        } else {
+            String::from(format!("{}", calc_time.format("%I:%M %P")))
+        }
+        
+    };
+
+    // let ret_string = String::from(format!("{}", calc_time.format("%I:%M %P")));
     return ret_string;
 }
 
