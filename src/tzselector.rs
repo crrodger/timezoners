@@ -68,10 +68,11 @@ impl TzSelector {
         match &self.model.base_timezone {
             Some(base_zone) => {
                 
+                //This just creates default values that will be updated in the function below (scope headaches in if blocks)
                 let mut curr_start_time_tz: DateTime<Tz> = Local.from_local_date(&self.model.for_date).earliest().unwrap().and_hms(12, 0, 0).with_timezone(&Tz::UTC);
                 let mut curr_end_time_tz: DateTime<Tz> = Local.from_local_date(&self.model.for_date).earliest().unwrap().and_hms(12, 0, 0).with_timezone(&Tz::UTC);
 
-                let (opt_curr_start_time_tz, opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_zone), self.model.this_timezone.clone(), self.model.for_date);
+                let (opt_curr_start_time_tz, opt_curr_end_time_tz, start_same_date, end_same_date) = get_current_timezone_range(String::from(base_zone), self.model.this_timezone.clone(), self.model.for_date);
                 
                 if opt_curr_end_time_tz == None || opt_curr_start_time_tz == None {
                     return;
@@ -87,8 +88,22 @@ impl TzSelector {
 
                 println!("Start time {} / End time {}", curr_start_time_tz, curr_end_time_tz);
 
-                self.widgets.lbl_start.set_text(format!("{}", curr_start_time_tz.format("%I:%M %P")).as_ref());
-                self.widgets.lbl_end.set_text(format!("{}", curr_end_time_tz.format("%I:%M %P")).as_ref());
+                if let Some(b) = start_same_date {
+                    if b {
+                        self.widgets.lbl_start.set_text(format!("{}", curr_start_time_tz.format("%I:%M %P")).as_ref());
+                    } else {
+                        self.widgets.lbl_start.set_text(format!("{}", curr_start_time_tz.format("* %I:%M %P")).as_ref());    
+                    }
+                }
+                    
+                if let Some(b) = end_same_date {
+                    if b {
+                        self.widgets.lbl_end.set_text(format!("{}", curr_end_time_tz.format("%I:%M %P")).as_ref());
+                    } else {
+                        self.widgets.lbl_end.set_text(format!("{}", curr_end_time_tz.format("* %I:%M %P")).as_ref());    
+                    }
+                }
+                
 
             },
             None => {
@@ -161,7 +176,7 @@ impl TzSelector {
             base_tz = param_base_tz.as_str();
         }
     
-        let (opt_curr_start_time_tz, _opt_curr_end_time_tz) = get_current_timezone_range(String::from(base_tz), self.model.this_timezone.clone(), self.model.for_date);
+        let (opt_curr_start_time_tz, _opt_curr_end_time_tz, _, _) = get_current_timezone_range(String::from(base_tz), self.model.this_timezone.clone(), self.model.for_date);
                     
         if opt_curr_start_time_tz == None {
             return;
@@ -198,7 +213,8 @@ impl TzSelector {
 }
 
 // Returns start and end DateTimes for the current timezone based off the start and end times of the base timezones
-fn get_current_timezone_range(base_tz: String, this_tz: Option<String>, for_date: NaiveDate) -> (Option<DateTime<Tz>>, Option<DateTime<Tz>>) {
+//The booleans indicate if the current timezone start and end values are today or not (if false they are likely yesterday )
+fn get_current_timezone_range(base_tz: String, this_tz: Option<String>, for_date: NaiveDate) -> (Option<DateTime<Tz>>, Option<DateTime<Tz>>, Option<bool>, Option<bool>) {
     
     let (base_start_time_tz, base_end_time_tz) = get_base_timezone_range(base_tz.clone(), for_date);
 
@@ -207,17 +223,29 @@ fn get_current_timezone_range(base_tz: String, this_tz: Option<String>, for_date
         if tz.len() > 0 {
             tz_curr = tz.parse().unwrap();
         } else {
-            return (None, None)
+            return (None, None, None, None)
         }
     } else {
         //If no timezone is selected for current control do nothing
-        return (None, None);
+        return (None, None, None, None);
     }
 
     let curr_start_time_tz = base_start_time_tz.with_timezone(&tz_curr);
     let curr_end_time_tz = base_end_time_tz.with_timezone(&tz_curr);
+    let b_start: bool = if curr_start_time_tz.date() < base_start_time_tz.date() {
+        false
+    } else {
+        true
+    };
 
-    return(Some(curr_start_time_tz), Some(curr_end_time_tz));
+    let b_end: bool = if curr_end_time_tz.date() > base_end_time_tz.date() {
+        false
+    } else {
+        true
+    };
+
+
+    return(Some(curr_start_time_tz), Some(curr_end_time_tz), Some(b_start), Some(b_end));
 }
 
 fn get_base_timezone_range(base_tz: String, for_date: NaiveDate) -> (DateTime<Tz>, DateTime<Tz>) {
@@ -233,7 +261,12 @@ fn get_base_timezone_range(base_tz: String, for_date: NaiveDate) -> (DateTime<Tz
 }
 
 fn get_time_string_from_index(value: f64, start_time: &str) ->String {
-    let starting_time: NaiveTime = NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap();
+    let starting_time = if start_time.contains("*") {
+        NaiveTime::parse_from_str(&start_time[2..], "%I:%M %P").unwrap()
+    } else {
+        NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap()
+    };
+    // let starting_time: NaiveTime = NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap();
     let offset_dur: Duration = Duration::minutes(value as i64 * 15);
     let calc_time = starting_time + offset_dur;
     let ret_string = String::from(format!("{}", calc_time.format("%I:%M %P")));
