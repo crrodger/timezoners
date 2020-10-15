@@ -198,12 +198,19 @@ impl TzSelector {
         // gr_day.add_color_stop_rgba(offset + 0.5, 0.2, 0.2, 0.2, 0.5);
         // gr_day.add_color_stop_rgba(offset + 1.0,  0.98, 0.86, 0.12, 0.5);
     
+
+        //Gold/yellow 0.98, 0.86, 0.12, 0.5
+        //Dark gray 0.2, 0.2, 0.2, 0.5
+        //Light gray 0.94, 0.94, 0.94, 0.5
+        //Light blue 66.0/255.0, 239.0/255.0, 245.0/255.0, 0.8
+
+        // Create gradient twice the width of the output area and then copy  subset from it
         let gr_two_day = LinearGradient::new(x, y, w*2.0, h);
-        gr_two_day.add_color_stop_rgba(0.0, 0.2, 0.2, 0.2, 0.5);
+        gr_two_day.add_color_stop_rgba(0.0, 0.2, 0.2, 0.2, 0.3);
         gr_two_day.add_color_stop_rgba(0.25, 0.98, 0.86, 0.12, 0.5);
         gr_two_day.add_color_stop_rgba(0.5, 0.2, 0.2, 0.2, 0.5);
         gr_two_day.add_color_stop_rgba(0.75,  0.98, 0.86, 0.12, 0.5);
-        gr_two_day.add_color_stop_rgba(1.0, 0.2, 0.2, 0.2, 0.5);
+        gr_two_day.add_color_stop_rgba(1.0, 0.2, 0.2, 0.2, 0.8);
         
         let tx_index = calc_day_percent_complete(curr_start_time_tz);
         let mut mtx = Matrix::identity();
@@ -217,7 +224,8 @@ impl TzSelector {
         gr_two_day.set_matrix(mtx);
 
         ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
-        
+        ctx.set_line_width(5.0);
+
         // unsafe {
             // ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
             // ctx.set_source(&gr_day);
@@ -228,14 +236,15 @@ impl TzSelector {
         ctx.paint();
 
 
-        ctx.set_source_rgba(0.0, 0.9, 0.2, 1.0);
+        // ctx.set_source_rgba(0.0, 0.9, 0.2, 0.7);
+        ctx.set_source_rgba(0.2, 0.2, 0.9, 0.9);
         if day_end > day_start {
             ctx.rectangle(day_start*w, 1.0, w*(day_end-day_start), h-2.0);
         } else {
             ctx.rectangle(0.0, 1.0, w*(day_end), h-2.0);
             ctx.rectangle(w*day_start, 1.0, w, h-2.0);
         }
-        
+
         ctx.stroke();
         // ctx.fill();
         
