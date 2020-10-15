@@ -2,7 +2,9 @@ use relm::{Relm, Update, Widget, Channel};
 use gtk::prelude::*;
 use gtk::{Window, Builder, Box, 
     MenuItem, ToolButton, Dialog, Button, Calendar, STYLE_PROVIDER_PRIORITY_APPLICATION, CssProvider,
+    ColorChooser,
 };
+use gdk::{RGBA};
 use chrono::{NaiveDate, Local, Datelike};
 use crate::relm::ContainerWidget;
 use crate::model::*;
@@ -84,6 +86,27 @@ impl Update for Win {
             DateCancel => {
                 self.widgets.dlg_calendar.hide();
             },
+            SelectColour => {
+                self.widgets.dlg_col_col_midday.set_rgba(&RGBA {
+                                                red:     self.config.midday_colour.0, 
+                                                green:   self.config.midday_colour.1,
+                                                blue:    self.config.midday_colour.2,
+                                                alpha:   self.config.midday_colour.3});
+                self.widgets.dlg_col_col_workday.set_rgba(&RGBA {
+                                                    red:     self.config.workday_colour.0, 
+                                                    green:   self.config.workday_colour.1,
+                                                    blue:    self.config.workday_colour.2,
+                                                    alpha:   self.config.workday_colour.3});
+                self.widgets.dlg_colour.show_all();
+            },
+            ColourOkay => {
+                println!("midday {}", self.widgets.dlg_col_col_midday.get_rgba());
+                println!("workday {}", self.widgets.dlg_col_col_workday.get_rgba());
+                self.widgets.dlg_colour.hide();
+            },
+            ColourCancel => {
+                self.widgets.dlg_colour.hide();
+            },
             //Messages from child components
             TimezoneSelectChanged(index, new_zone) => {
                 self.model.tz_zones[index as usize] = Some(new_zone);
@@ -149,12 +172,20 @@ impl Widget for Win {
         let tz_box: Box = builder_main.get_object("box_widgets").expect("Could not get the widgets box");
         let tb_btn_add_tz: ToolButton = builder_main.get_object("tb_btn_add_tz").expect("Could not get tb_btn_add_tz");
         let tb_btn_sel_cal: ToolButton = builder_main.get_object("tb_btn_sel_cal").expect("Could not geto tb_btn_sel_cal");
+        let tb_btn_sel_col: ToolButton = builder_main.get_object("tb_btn_sel_col").expect("Could not get tool button tb_btn_sel_col");
         
         let dlg_calendar: Dialog = builder_main.get_object("dlg_calendar").expect("Could not get dialog dlg_calendar");
         let cal_date: Calendar = builder_main.get_object("cal_date").expect("Could not get cal_date");
         let pb_dlg_cal_ok: Button = builder_main.get_object("pb_dlg_cal_ok").expect("Could not get button pb_dlg_cal_ok");
         let pb_dlg_cal_cancel: Button = builder_main.get_object("pb_dlg_cal_cancel").expect("Could not get button pb_dlg_cal_cancel");
         
+        let dlg_colour: Dialog  = builder_main.get_object("dlg_colour").expect("Could not get dialog dlg_colour");
+        let dlg_col_col_midday: ColorChooser = builder_main.get_object("dlg_col_col_midday").expect("Could not get colour chooser dlg_col_col_midday");
+        let dlg_col_col_workday: ColorChooser = builder_main.get_object("dlg_col_col_workday").expect("Could not get colour chooser dlg_col_col_workday");
+        let pb_dlg_col_ok: Button = builder_main.get_object("pb_dlg_col_ok").expect("Could not get button pb_dlg_col_ok");
+        let pb_dlg_col_cancel: Button = builder_main.get_object("pb_dlg_col_cancel").expect("Could not get button pb_dlg_col_cancel");
+
+
 
 
         let first_selector = tz_box.add_widget::<TzSelector>((0, base_tz.clone(), base_tz.clone(), model.for_date.clone()));
@@ -175,6 +206,10 @@ impl Widget for Win {
         connect!(relm, tb_btn_sel_cal, connect_clicked(_), Msg::SelectDate);
         connect!(relm, pb_dlg_cal_ok, connect_clicked(_), Msg::DateOkay);
         connect!(relm, pb_dlg_cal_cancel, connect_clicked(_), Msg::DateCancel);
+
+        connect!(relm, tb_btn_sel_col, connect_clicked(_), Msg::SelectColour);
+        connect!(relm, pb_dlg_col_ok, connect_clicked(_), Msg::ColourOkay);
+        connect!(relm, pb_dlg_col_cancel, connect_clicked(_), Msg::ColourCancel);
         
         window.show_all();
         window.move_(config.win_pos_x, config.win_pos_y);
@@ -185,10 +220,16 @@ impl Widget for Win {
             window,
             tb_btn_add_tz,
             tb_btn_sel_cal,
+            tb_btn_sel_col,
             dlg_calendar,
             cal_date,
             pb_dlg_cal_ok,
-            pb_dlg_cal_cancel
+            pb_dlg_cal_cancel,
+            dlg_colour,
+            dlg_col_col_midday,
+            dlg_col_col_workday,
+            pb_dlg_col_ok,
+            pb_dlg_col_cancel, 
         };
 
         Win {

@@ -12,8 +12,11 @@ pub enum Msg {
     Quit,
     AddTzSelector(String),
     SelectDate,
+    SelectColour,
     DateOkay,
     DateCancel,
+    ColourOkay,
+    ColourCancel,
     //Messages from child widgets
     TimezoneSelectChanged(i32, String),
     TimeSelectChanged(f64),

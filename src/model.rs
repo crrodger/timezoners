@@ -22,17 +22,21 @@ pub struct Config {
     pub win_pos_y:        i32,
     pub win_width:        i32,
     pub win_height:       i32,
+    pub midday_colour:    (f64, f64, f64, f64),
+    pub workday_colour:   (f64, f64, f64, f64),
 }
 
 //  If the content of this structure changes then delete config file from ~/Library/Preferences/<app-name> toml file
 impl Default for Config {
     fn default() -> Self { 
         Self { 
-            zones:              Vec::new(),
+            zones:            Vec::new(),
             win_pos_x:        0,
             win_pos_y:        0,
             win_width:        500,
             win_height:       300,
+            midday_colour:    (0.98, 0.86, 0.12, 0.5),
+            workday_colour:   (0.2, 0.2, 0.9, 0.9),
         }
     }
 }
