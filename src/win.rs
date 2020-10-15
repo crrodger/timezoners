@@ -105,7 +105,7 @@ impl Update for Win {
             //Messages to child componenets
             ChangeBaseTimezone(new_zone) => {
                 self.model.base_tz = new_zone.clone();
-                for i in 1..self.model.tz_ctrls.len() {
+                for i in 0..self.model.tz_ctrls.len() {
                     self.model.tz_ctrls[i].emit(crate::tzselector::Msg::FromParentBaseTimezoneChanged(new_zone.clone()));
                 }
             },

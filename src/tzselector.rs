@@ -202,11 +202,6 @@ impl TzSelector {
         };
         ctx.paint();
     
-        // ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
-        // ctx.rectangle(x, y, w, h);
-        // ctx.fill();
-        // ctx.set_source_rgba(0.2, 1.0, 0.2, 1.0);
-        // ctx.arc(x/2.0, y/2.0, h/2.0, 0.0, 90.0 * (3.1414 / 180.0));
         ctx.fill();
         
     }
@@ -250,12 +245,11 @@ fn get_current_timezone_range(base_tz: String, this_tz: Option<String>, for_date
 
 fn get_base_timezone_range(base_tz: String, for_date: NaiveDate) -> (DateTime<Tz>, DateTime<Tz>) {
     
-    let base_start_time = NaiveDate::from_ymd(for_date.year(), for_date.month(), for_date.day()).and_hms(0, 0, 0);
-    let base_end_time = NaiveDate::from_ymd(for_date.year(), for_date.month(), for_date.day()).and_hms(23, 59, 59);
-
     let tz_base: Tz = base_tz.parse().unwrap();
-    let base_start_time_tz = tz_base.from_local_datetime(&base_start_time).unwrap();
-    let base_end_time_tz = tz_base.from_local_datetime(&base_end_time).unwrap();
+    let base_start_time_tz = tz_base.ymd(for_date.year(), for_date.month(), for_date.day()).and_hms(0, 0, 0);
+    let base_end_time_tz = tz_base.ymd(for_date.year(), for_date.month(), for_date.day()).and_hms(23, 59, 59);
+    
+    // println!("{}",base_start_time_tz);
 
     return (base_start_time_tz, base_end_time_tz);
 }
@@ -371,6 +365,7 @@ impl Update for TzSelector {
                 // println!("Base tz change to {}", new_zone);
                 self.model.base_timezone = new_zone;
                 self.update_time_labels();
+                self.update_time_display();
             },
             // Should only be recieved by non base timezone Tz Controls
             FromParentBaseTimeSelectChanged(new_time) => {
