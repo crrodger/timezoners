@@ -186,9 +186,21 @@ impl Widget for Win {
         let pb_dlg_col_cancel: Button = builder_main.get_object("pb_dlg_col_cancel").expect("Could not get button pb_dlg_col_cancel");
 
 
+        let midday_colour = RGBA {
+            red:     config.midday_colour.0, 
+            green:   config.midday_colour.1,
+            blue:    config.midday_colour.2,
+            alpha:   config.midday_colour.3
+        };
 
-
-        let first_selector = tz_box.add_widget::<TzSelector>((0, base_tz.clone(), base_tz.clone(), model.for_date.clone()));
+        let workday_colour = RGBA {
+            red:     config.workday_colour.0, 
+            green:   config.workday_colour.1,
+            blue:    config.workday_colour.2,
+            alpha:   config.workday_colour.3
+        };
+        
+        let first_selector = tz_box.add_widget::<TzSelector>((0, base_tz.clone(), base_tz.clone(), model.for_date.clone(), midday_colour, workday_colour));
         // first_selector.set_index(0);
         connect!(first_selector@crate::tzselector::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
         connect!(first_selector@crate::tzselector::Msg::NotifyParentTimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
@@ -274,7 +286,20 @@ impl Widget for Win {
 
 impl Win {
     fn add_tz_selector(&mut self, tz_location: String) {
-        let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), Some(tz_location.clone()), self.model.for_date.clone()));
+        let midday_colour = RGBA {
+            red:     self.config.midday_colour.0, 
+            green:   self.config.midday_colour.1,
+            blue:    self.config.midday_colour.2,
+            alpha:   self.config.midday_colour.3
+        };
+
+        let workday_colour = RGBA {
+            red:     self.config.workday_colour.0, 
+            green:   self.config.workday_colour.1,
+            blue:    self.config.workday_colour.2,
+            alpha:   self.config.workday_colour.3
+        };
+        let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), Some(tz_location.clone()), self.model.for_date.clone(), midday_colour, workday_colour));
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTimeSelectChanged(new_time), self.model.local_relm, Msg::TimeSelectChanged(new_time));
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), self.model.local_relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));

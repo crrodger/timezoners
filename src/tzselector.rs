@@ -4,7 +4,7 @@ use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustmen
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt,};
 use relm::{Update, Widget, Relm, DrawHandler};
-use gdk::{EventKey};
+use gdk::{EventKey, RGBA};
 use cairo::{LinearGradient, Matrix,};
 use chrono::{TimeZone, NaiveDate, NaiveTime, Local, Datelike, Timelike, Duration, DateTime};
 use chrono_tz::{TZ_VARIANTS, Tz};
@@ -35,6 +35,8 @@ pub struct TzSelectorModel {
     this_timezone: Option<String>,
     local_relm: Relm<TzSelector>,
     draw_handler: DrawHandler<DrawingArea>,
+    midday_colour: RGBA,
+    workday_colour: RGBA,
     pub liststore: ListStore,
     pub liststorefilter: TreeModelFilter,
 }
@@ -203,13 +205,19 @@ impl TzSelector {
         //Dark gray 0.2, 0.2, 0.2, 0.5
         //Light gray 0.94, 0.94, 0.94, 0.5
         //Light blue 66.0/255.0, 239.0/255.0, 245.0/255.0, 0.8
-
+        
         // Create gradient twice the width of the output area and then copy  subset from it
         let gr_two_day = LinearGradient::new(x, y, w*2.0, h);
         gr_two_day.add_color_stop_rgba(0.0, 0.2, 0.2, 0.2, 0.3);
-        gr_two_day.add_color_stop_rgba(0.25, 0.98, 0.86, 0.12, 0.5);
+        gr_two_day.add_color_stop_rgba(0.25, self.model.midday_colour.red, 
+                                                     self.model.midday_colour.green, 
+                                                     self.model.midday_colour.blue, 
+                                                     self.model.midday_colour.alpha);
         gr_two_day.add_color_stop_rgba(0.5, 0.2, 0.2, 0.2, 0.5);
-        gr_two_day.add_color_stop_rgba(0.75,  0.98, 0.86, 0.12, 0.5);
+        gr_two_day.add_color_stop_rgba(0.75,  self.model.midday_colour.red, 
+                                                      self.model.midday_colour.green, 
+                                                      self.model.midday_colour.blue, 
+                                                      self.model.midday_colour.alpha);
         gr_two_day.add_color_stop_rgba(1.0, 0.2, 0.2, 0.2, 0.8);
         
         let tx_index = calc_day_percent_complete(curr_start_time_tz);
@@ -237,7 +245,10 @@ impl TzSelector {
 
 
         // ctx.set_source_rgba(0.0, 0.9, 0.2, 0.7);
-        ctx.set_source_rgba(0.2, 0.2, 0.9, 0.9);
+        ctx.set_source_rgba(self.model.workday_colour.red, 
+                            self.model.workday_colour.green, 
+                            self.model.workday_colour.blue, 
+                            self.model.workday_colour.alpha);
         if day_end > day_start {
             ctx.rectangle(day_start*w, 1.0, w*(day_end-day_start), h-2.0);
         } else {
@@ -358,7 +369,7 @@ fn calc_offset_for_time(curr_start_time_tz: DateTime<Tz>, hour:u32, minute:u32, 
 impl Update for TzSelector {
     
     type Model = TzSelectorModel;
-    type ModelParam = (i32, Option<String>, Option<String>, NaiveDate);
+    type ModelParam = (i32, Option<String>, Option<String>, NaiveDate, RGBA, RGBA);
     type Msg = Msg;
     
     fn update(&mut self, event: Msg) {
@@ -443,6 +454,8 @@ impl Update for TzSelector {
         let base_timezone = param.1;
         let this_timezone = param.2;
         let for_date = param.3;
+        let midday_colour = param.4;
+        let workday_colour = param.5;
         let liststore = ListStore::new(&[
             Type::String,
         ]);
@@ -459,6 +472,8 @@ impl Update for TzSelector {
             liststore,
             liststorefilter,
             draw_handler,
+            midday_colour,
+            workday_colour,
         }
     }
 }
