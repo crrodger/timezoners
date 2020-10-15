@@ -187,6 +187,9 @@ impl TzSelector {
         }
     
         let offset = calc_offset_for_midday(curr_start_time_tz);
+        let day_start = calc_offset_for_time(curr_start_time_tz, 8, 0, 0);
+        let day_end = calc_offset_for_time(curr_start_time_tz, 17, 0, 0);
+       
         
         let gr_day = LinearGradient::new(x, y, w, h);
         gr_day.add_color_stop_rgba(offset - 1.0, 0.98, 0.86, 0.12, 0.5);
@@ -201,8 +204,17 @@ impl TzSelector {
             ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
         };
         ctx.paint();
-    
-        ctx.fill();
+
+        ctx.set_source_rgba(0.0, 0.9, 0.2, 1.0);
+        if day_end > day_start {
+            ctx.rectangle(day_start*w, 1.0, w*(day_end-day_start), h-2.0);
+        } else {
+            ctx.rectangle(0.0, 1.0, w*(day_end), h-2.0);
+            ctx.rectangle(w*day_start, 1.0, w, h-2.0);
+        }
+        
+        ctx.stroke();
+        // ctx.fill();
         
     }
 }
@@ -282,18 +294,20 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
 }
 
 fn calc_offset_for_midday(curr_start_time_tz: DateTime<Tz>) -> f64 {
-    
-    println!("Current Start Time {}", curr_start_time_tz);
-    let midday = NaiveTime::from_hms(12, 0, 0);
+    return  calc_offset_for_time(curr_start_time_tz, 12, 0, 0) as f64;
+}
+
+fn calc_offset_for_time(curr_start_time_tz: DateTime<Tz>, hour:u32, minute:u32, sec:u32) -> f64 {
+    let ref_time = NaiveTime::from_hms(hour, minute, sec);
     let nv_curr = NaiveTime::from_hms(curr_start_time_tz.hour(), curr_start_time_tz.minute(), curr_start_time_tz.second());
     
-    let mut offset = (midday - nv_curr).num_minutes();
+    let mut offset = (ref_time - nv_curr).num_minutes();
     if offset < 0 {
         offset = offset + (24 * 60);
     }
     
     let index = ((offset as f64) / 15.0) / 96.0;
-    println!("Index {} Minutes Diff {} Hours Diff {}", index, offset, offset / 60);
+    // println!("Index {} Minutes Diff {} Hours Diff {}", index, offset, offset / 60);
 
     return index as f64;
 }
