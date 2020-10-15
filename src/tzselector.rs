@@ -5,7 +5,7 @@ use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustmen
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt,};
 use relm::{Update, Widget, Relm, DrawHandler};
 use gdk::{EventKey};
-use cairo::{LinearGradient, Pattern};
+use cairo::{LinearGradient, Matrix,};
 use chrono::{TimeZone, NaiveDate, NaiveTime, Local, Datelike, Timelike, Duration, DateTime};
 use chrono_tz::{TZ_VARIANTS, Tz};
 
@@ -186,24 +186,47 @@ impl TzSelector {
             curr_start_time_tz = start_tz;
         }
     
-        let offset = calc_offset_for_midday(curr_start_time_tz);
+        // let offset = calc_offset_for_midday(curr_start_time_tz);
         let day_start = calc_offset_for_time(curr_start_time_tz, 8, 0, 0);
         let day_end = calc_offset_for_time(curr_start_time_tz, 17, 0, 0);
        
         
-        let gr_day = LinearGradient::new(x, y, w, h);
-        gr_day.add_color_stop_rgba(offset - 1.0, 0.98, 0.86, 0.12, 0.5);
-        gr_day.add_color_stop_rgba(offset - 0.5, 0.2, 0.2, 0.2, 0.5);
-        gr_day.add_color_stop_rgba(offset,  0.98, 0.86, 0.12, 0.5);
-        gr_day.add_color_stop_rgba(offset + 0.5, 0.2, 0.2, 0.2, 0.5);
-        gr_day.add_color_stop_rgba(offset + 1.0,  0.98, 0.86, 0.12, 0.5);
+        // let gr_day = LinearGradient::new(x, y, w, h);
+        // gr_day.add_color_stop_rgba(offset - 1.0, 0.98, 0.86, 0.12, 0.5);
+        // gr_day.add_color_stop_rgba(offset - 0.5, 0.2, 0.2, 0.2, 0.5);
+        // gr_day.add_color_stop_rgba(offset,  0.98, 0.86, 0.12, 0.5);
+        // gr_day.add_color_stop_rgba(offset + 0.5, 0.2, 0.2, 0.2, 0.5);
+        // gr_day.add_color_stop_rgba(offset + 1.0,  0.98, 0.86, 0.12, 0.5);
     
-        // ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
+        let gr_two_day = LinearGradient::new(x, y, w*2.0, h);
+        gr_two_day.add_color_stop_rgba(0.0, 0.2, 0.2, 0.2, 0.5);
+        gr_two_day.add_color_stop_rgba(0.25, 0.98, 0.86, 0.12, 0.5);
+        gr_two_day.add_color_stop_rgba(0.5, 0.2, 0.2, 0.2, 0.5);
+        gr_two_day.add_color_stop_rgba(0.75,  0.98, 0.86, 0.12, 0.5);
+        gr_two_day.add_color_stop_rgba(1.0, 0.2, 0.2, 0.2, 0.5);
         
-        unsafe {
-            ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
-        };
+        let tx_index = calc_day_percent_complete(curr_start_time_tz);
+        let mut mtx = Matrix::identity();
+        // Translation is the number of pixels we need to shift the source image to
+        // get it into the state we want to display. Therefore shift the source left (which is analogous
+        //to shifting the target right i.e. positive)
+        //It is done as a percentage of the source image but because w is dest and s is 2/d we
+        // dont need to divide by 2 then multiply by 2
+        // translate(tx_index * ( w * 2 / 2))
+        mtx.translate(tx_index * w, 0.0);
+        gr_two_day.set_matrix(mtx);
+
+        ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
+        
+        // unsafe {
+            // ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
+            // ctx.set_source(&gr_day);
+        // };
+
+
+        ctx.set_source(&gr_two_day);
         ctx.paint();
+
 
         ctx.set_source_rgba(0.0, 0.9, 0.2, 1.0);
         if day_end > day_start {
@@ -295,6 +318,17 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
 
 fn calc_offset_for_midday(curr_start_time_tz: DateTime<Tz>) -> f64 {
     return  calc_offset_for_time(curr_start_time_tz, 12, 0, 0) as f64;
+}
+
+// What proportion of the day is the start time of this timezone
+fn calc_day_percent_complete(curr_start_time_tz: DateTime<Tz>) -> f64 {
+    let full_day = NaiveTime::from_hms(23,59,59);
+    let nv_curr = NaiveTime::from_hms(curr_start_time_tz.hour(), curr_start_time_tz.minute(), curr_start_time_tz.second());
+    
+    let offset = 1.0 - (full_day - nv_curr).num_minutes() as f64 / (24.0 * 60.0);
+    // println!("Full day {} Day start {}, offset {}",full_day,  nv_curr, offset);
+
+    return offset;
 }
 
 fn calc_offset_for_time(curr_start_time_tz: DateTime<Tz>, hour:u32, minute:u32, sec:u32) -> f64 {
