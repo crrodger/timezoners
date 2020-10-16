@@ -1,7 +1,7 @@
 use relm::{Relm, Update, Widget, Channel};
 use gtk::prelude::*;
 use gtk::{Window, Builder, Box, 
-    MenuItem, ToolButton, Dialog, Button, Calendar, STYLE_PROVIDER_PRIORITY_APPLICATION, CssProvider,
+    ToolButton, Dialog, Button, Calendar, STYLE_PROVIDER_PRIORITY_APPLICATION, CssProvider,
     ColorChooser,
 };
 use gdk::{RGBA};
@@ -51,7 +51,7 @@ impl Update for Win {
             ProcessUpdateMsg((msg_type , msg_str)) => {
                 match msg_type {
                     MsgUpdateType::StatusMessage => {
-                        println!("StatsMessage -> {}", msg_str);
+                        println!("StatusMessage -> {}", msg_str);
                     }
                 }
             },
@@ -78,7 +78,7 @@ impl Update for Win {
                 let (y,m,d) = self.widgets.cal_date.get_date();
                 self.model.for_date = NaiveDate::from_ymd(y as i32, m + 1, d);
                 self.widgets.dlg_calendar.hide();
-                self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("%Y/%m/%d")).as_ref()));
+                self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("On %Y/%m/%d")).as_ref()));
                 for i in 1..self.model.tz_ctrls.len() {
                     self.model.tz_ctrls[i].emit(crate::tzselector::Msg::FromParentDateChanged(self.model.for_date));
                 };
@@ -100,9 +100,14 @@ impl Update for Win {
                 self.widgets.dlg_colour.show_all();
             },
             ColourOkay => {
-                println!("midday {}", self.widgets.dlg_col_col_midday.get_rgba());
-                println!("workday {}", self.widgets.dlg_col_col_workday.get_rgba());
+                let midday_colour = self.widgets.dlg_col_col_midday.get_rgba();
+                let workday_colour = self.widgets.dlg_col_col_workday.get_rgba();
+                self.config.midday_colour = (midday_colour.red, midday_colour.green, midday_colour.blue, midday_colour.alpha);
+                self.config.workday_colour = (workday_colour.red, workday_colour.green, workday_colour.blue, workday_colour.alpha);
                 self.widgets.dlg_colour.hide();
+                for i in 0..self.model.tz_ctrls.len() {
+                    self.model.tz_ctrls[i].emit(crate::tzselector::Msg::FromParentColourChanged(self.config.midday_colour, self.config.workday_colour));
+                }
             },
             ColourCancel => {
                 self.widgets.dlg_colour.hide();
@@ -167,9 +172,8 @@ impl Widget for Win {
 
         //Main window
         let window: Window = builder_main.get_object("main_window").expect("Couldn't get Main Window");
-        let menu_item_quit: MenuItem = builder_main.get_object("menu_item_quit").expect("Couldn't get quite menu item");
-        // let time_ctrl: Window = builder.get_object("widget_tz_control").expect("Could not get time control window");
         let tz_box: Box = builder_main.get_object("box_widgets").expect("Could not get the widgets box");
+        let tb_btn_sel_exit: ToolButton = builder_main.get_object("tb_btn_sel_exit").expect("Couldn't get exit button tb_btn_sel_exit");
         let tb_btn_add_tz: ToolButton = builder_main.get_object("tb_btn_add_tz").expect("Could not get tb_btn_add_tz");
         let tb_btn_sel_cal: ToolButton = builder_main.get_object("tb_btn_sel_cal").expect("Could not geto tb_btn_sel_cal");
         let tb_btn_sel_col: ToolButton = builder_main.get_object("tb_btn_sel_col").expect("Could not get tool button tb_btn_sel_col");
@@ -186,19 +190,17 @@ impl Widget for Win {
         let pb_dlg_col_cancel: Button = builder_main.get_object("pb_dlg_col_cancel").expect("Could not get button pb_dlg_col_cancel");
 
 
-        let midday_colour = RGBA {
-            red:     config.midday_colour.0, 
-            green:   config.midday_colour.1,
-            blue:    config.midday_colour.2,
-            alpha:   config.midday_colour.3
-        };
+        let midday_colour = (
+            config.midday_colour.0, 
+            config.midday_colour.1,
+            config.midday_colour.2,
+            config.midday_colour.3);
 
-        let workday_colour = RGBA {
-            red:     config.workday_colour.0, 
-            green:   config.workday_colour.1,
-            blue:    config.workday_colour.2,
-            alpha:   config.workday_colour.3
-        };
+        let workday_colour = (
+            config.workday_colour.0, 
+            config.workday_colour.1,
+            config.workday_colour.2,
+            config.workday_colour.3);
         
         let first_selector = tz_box.add_widget::<TzSelector>((0, base_tz.clone(), base_tz.clone(), model.for_date.clone(), midday_colour, workday_colour));
         // first_selector.set_index(0);
@@ -213,7 +215,7 @@ impl Widget for Win {
         
         connect!(relm, window, connect_delete_event(_, _), return (Some(Msg::Quit), Inhibit(false)));
         // connect!(relm, window, connect_show(_), Msg::SetupTree);
-        connect!(relm, menu_item_quit, connect_activate(_), Msg::Quit);
+        connect!(relm, tb_btn_sel_exit, connect_clicked(_), Msg::Quit);
         connect!(relm, tb_btn_add_tz, connect_clicked(_), Msg::AddTzSelector(String::from("")));
         connect!(relm, tb_btn_sel_cal, connect_clicked(_), Msg::SelectDate);
         connect!(relm, pb_dlg_cal_ok, connect_clicked(_), Msg::DateOkay);
@@ -262,7 +264,7 @@ impl Widget for Win {
             }
         }
 
-        self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("%Y/%m/%d")).as_ref()));
+        self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("On %Y/%m/%d")).as_ref()));
 
         let style_context = self.widgets.tz_box.get_style_context();
         // TODO: remove the next line when relm supports css.
@@ -286,19 +288,20 @@ impl Widget for Win {
 
 impl Win {
     fn add_tz_selector(&mut self, tz_location: String) {
-        let midday_colour = RGBA {
-            red:     self.config.midday_colour.0, 
-            green:   self.config.midday_colour.1,
-            blue:    self.config.midday_colour.2,
-            alpha:   self.config.midday_colour.3
-        };
+        let midday_colour = (
+            self.config.midday_colour.0, 
+            self.config.midday_colour.1,
+            self.config.midday_colour.2,
+            self.config.midday_colour.3
+        );
 
-        let workday_colour = RGBA {
-            red:     self.config.workday_colour.0, 
-            green:   self.config.workday_colour.1,
-            blue:    self.config.workday_colour.2,
-            alpha:   self.config.workday_colour.3
-        };
+        let workday_colour = (
+            self.config.workday_colour.0, 
+            self.config.workday_colour.1,
+            self.config.workday_colour.2,
+            self.config.workday_colour.3
+        );
+
         let new_selector = self.widgets.tz_box.add_widget::<TzSelector>((self.model.tz_ctrls.len() as i32, self.model.base_tz.clone(), Some(tz_location.clone()), self.model.for_date.clone(), midday_colour, workday_colour));
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTimeSelectChanged(new_time), self.model.local_relm, Msg::TimeSelectChanged(new_time));
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));

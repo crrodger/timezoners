@@ -4,7 +4,7 @@ use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustmen
             SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
             CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt,};
 use relm::{Update, Widget, Relm, DrawHandler};
-use gdk::{EventKey, RGBA};
+use gdk::{EventKey};
 use cairo::{LinearGradient, Matrix,};
 use chrono::{TimeZone, NaiveDate, NaiveTime, Local, Datelike, Timelike, Duration, DateTime};
 use chrono_tz::{TZ_VARIANTS, Tz};
@@ -27,6 +27,7 @@ pub enum Msg {
     FromParentBaseTimeSelectChanged(f64),
     FromParentBaseTimezoneChanged(Option<String>),
     FromParentDateChanged(NaiveDate),
+    FromParentColourChanged((f64, f64, f64, f64), (f64, f64, f64, f64)),
 }
 pub struct TzSelectorModel {
     index: i32,
@@ -35,8 +36,8 @@ pub struct TzSelectorModel {
     this_timezone: Option<String>,
     local_relm: Relm<TzSelector>,
     draw_handler: DrawHandler<DrawingArea>,
-    midday_colour: RGBA,
-    workday_colour: RGBA,
+    midday_colour: (f64, f64, f64, f64),
+    workday_colour: (f64, f64, f64, f64),
     pub liststore: ListStore,
     pub liststorefilter: TreeModelFilter,
 }
@@ -88,7 +89,7 @@ impl TzSelector {
                     curr_end_time_tz = end_tz;
                 }
 
-                println!("Start time {} / End time {}", curr_start_time_tz, curr_end_time_tz);
+                // println!("Start time {} / End time {}", curr_start_time_tz, curr_end_time_tz);
 
                 if let Some(b) = start_same_date {
                     if b {
@@ -209,15 +210,15 @@ impl TzSelector {
         // Create gradient twice the width of the output area and then copy  subset from it
         let gr_two_day = LinearGradient::new(x, y, w*2.0, h);
         gr_two_day.add_color_stop_rgba(0.0, 0.2, 0.2, 0.2, 0.3);
-        gr_two_day.add_color_stop_rgba(0.25, self.model.midday_colour.red, 
-                                                     self.model.midday_colour.green, 
-                                                     self.model.midday_colour.blue, 
-                                                     self.model.midday_colour.alpha);
+        gr_two_day.add_color_stop_rgba(0.25, self.model.midday_colour.0, 
+                                                     self.model.midday_colour.1, 
+                                                     self.model.midday_colour.2, 
+                                                     self.model.midday_colour.3);
         gr_two_day.add_color_stop_rgba(0.5, 0.2, 0.2, 0.2, 0.5);
-        gr_two_day.add_color_stop_rgba(0.75,  self.model.midday_colour.red, 
-                                                      self.model.midday_colour.green, 
-                                                      self.model.midday_colour.blue, 
-                                                      self.model.midday_colour.alpha);
+        gr_two_day.add_color_stop_rgba(0.75,  self.model.midday_colour.0, 
+                                                      self.model.midday_colour.1, 
+                                                      self.model.midday_colour.2, 
+                                                      self.model.midday_colour.3);
         gr_two_day.add_color_stop_rgba(1.0, 0.2, 0.2, 0.2, 0.8);
         
         let tx_index = calc_day_percent_complete(curr_start_time_tz);
@@ -232,7 +233,7 @@ impl TzSelector {
         gr_two_day.set_matrix(mtx);
 
         ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
-        ctx.set_line_width(5.0);
+        ctx.set_line_width(3.0);
 
         // unsafe {
             // ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
@@ -245,15 +246,15 @@ impl TzSelector {
 
 
         // ctx.set_source_rgba(0.0, 0.9, 0.2, 0.7);
-        ctx.set_source_rgba(self.model.workday_colour.red, 
-                            self.model.workday_colour.green, 
-                            self.model.workday_colour.blue, 
-                            self.model.workday_colour.alpha);
+        ctx.set_source_rgba(self.model.workday_colour.0, 
+                            self.model.workday_colour.1, 
+                            self.model.workday_colour.2, 
+                            self.model.workday_colour.3);
         if day_end > day_start {
             ctx.rectangle(day_start*w, 1.0, w*(day_end-day_start), h-2.0);
         } else {
-            ctx.rectangle(0.0, 1.0, w*(day_end), h-2.0);
-            ctx.rectangle(w*day_start, 1.0, w, h-2.0);
+            ctx.rectangle(-2.0, 1.0, w*(day_end), h-2.0);
+            ctx.rectangle(day_start*w, 1.0, w, h-2.0);
         }
 
         ctx.stroke();
@@ -369,7 +370,7 @@ fn calc_offset_for_time(curr_start_time_tz: DateTime<Tz>, hour:u32, minute:u32, 
 impl Update for TzSelector {
     
     type Model = TzSelectorModel;
-    type ModelParam = (i32, Option<String>, Option<String>, NaiveDate, RGBA, RGBA);
+    type ModelParam = (i32, Option<String>, Option<String>, NaiveDate, (f64, f64, f64, f64), (f64, f64, f64, f64));
     type Msg = Msg;
     
     fn update(&mut self, event: Msg) {
@@ -444,7 +445,12 @@ impl Update for TzSelector {
                 self.model.for_date = new_date;
                 self.update_time_labels();
                 self.update_time_display();
-            }
+            },
+            FromParentColourChanged(midday, workday) => {
+                self.model.midday_colour = midday;
+                self.model.workday_colour = workday;
+                self.widgets.draw_illum.queue_draw();
+            },
         }
     }
 
