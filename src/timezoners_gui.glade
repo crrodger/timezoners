@@ -73,7 +73,7 @@
   </object>
   <object class="GtkDialog" id="dlg_colour">
     <property name="can-focus">False</property>
-    <property name="title" translatable="yes">Shading COlours</property>
+    <property name="title" translatable="yes">Shading Colours</property>
     <property name="modal">True</property>
     <property name="type-hint">dialog</property>
     <property name="deletable">False</property>
@@ -221,6 +221,7 @@
               <object class="GtkToolButton" id="tb_btn_sel_cal">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="tooltip-text" translatable="yes">Select the date for comparing time zones</property>
                 <property name="label" translatable="yes">yyyy/mm/dd</property>
                 <property name="use-underline">True</property>
                 <property name="stock-id">gtk-preferences</property>
@@ -234,7 +235,7 @@
               <object class="GtkToolButton" id="tb_btn_sel_col">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes">Choose colours	</property>
+                <property name="tooltip-text" translatable="yes">Select colours for shading and work day limits</property>
                 <property name="label" translatable="yes">Colour</property>
                 <property name="use-underline">True</property>
                 <property name="stock-id">gtk-page-setup</property>
@@ -248,6 +249,7 @@
               <object class="GtkToolButton" id="tb_btn_sel_exit">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
+                <property name="tooltip-text" translatable="yes">Exit the application</property>
                 <property name="label" translatable="yes">Exit</property>
                 <property name="use-underline">True</property>
                 <property name="stock-id">gtk-quit</property>
