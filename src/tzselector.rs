@@ -1,10 +1,9 @@
 use glib::{ToValue, Type};
-use gtk::{Box, Button, ButtonExt, CellRendererExt, ComboBox, ComboBoxExt, Inhibit, Label, LabelExt, RangeExt, Scale, TreeModelExt, WidgetExt};
+use gtk::{Box, Button, ButtonExt, CellRendererExt, ComboBox, ComboBoxExt, EntryCompletionExt, Inhibit, Label, LabelExt, RangeExt, Scale, TreeModelExt, WidgetExt};
 use gtk::{Builder, prelude::{GtkListStoreExtManual, BuilderExtManual}, Adjustment, DrawingArea,
-            SearchEntry, SearchEntryExt, EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
-            CellLayoutExt, TreeModel, TreeIter, TreeModelFilterExt, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt,};
+            EntryExt, ListStore, TreeModelFilter, GtkListStoreExt, TreeViewColumnBuilder, CellRendererTextBuilder, 
+            CellLayoutExt, TreeModel, TreeIter, CssProvider, CssProviderExt, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContextExt, Entry, EntryCompletion,};
 use relm::{Update, Widget, Relm, DrawHandler};
-use gdk::{EventKey};
 use cairo::{LinearGradient, Matrix,};
 use chrono::{TimeZone, NaiveDate, NaiveTime, Local, Datelike, Timelike, Duration, DateTime};
 use chrono_tz::{TZ_VARIANTS, Tz};
@@ -13,9 +12,7 @@ use self::Msg::*;
 
 #[derive(Clone, Msg)]
 pub enum Msg {
-    SearchContentsChange,
-    SearchKeyReleased(EventKey),
-    SearchLostFocus,
+    SearchMatchSelected(TreeModel, TreeIter),
     DrawIllumination,
     RemoveTz,
     LocalTimezoneSelect,
@@ -50,9 +47,10 @@ pub struct TzSelectorWidgets {
     pub cmb_tz_name: ComboBox,
     pub tz_scale_adj: Adjustment,
     pub lbl_current_select_time: Label,
-    pub txt_search_tz: SearchEntry,
     pub pb_remove_tz: Button,
     pub draw_illum: DrawingArea,
+    pub cmb_tz_name_entrycompletion: EntryCompletion,
+    pub cmb_tz_name_entry: Entry,
 }
 
 
@@ -375,20 +373,14 @@ impl Update for TzSelector {
     
     fn update(&mut self, event: Msg) {
         match event {
-            SearchContentsChange => {
-                self.model.liststorefilter.refilter();
-            },
-            SearchKeyReleased(key) => {
-                if let Some(key_name) = key.get_keyval().name() {
-                    if key_name.as_str() == "Return" {
-                        self.widgets.cmb_tz_name.popup();
-                    }
+            SearchMatchSelected(tm, ti) => {
+                match tm.get_value(&ti, 0).get::<String>().unwrap() {
+                    Some(str_col_value) => {
+                        self.widgets.cmb_tz_name.set_active_id(Some(&str_col_value));
+                    },
+                    None => ()
                 }
-            },
-            SearchLostFocus => {
-                if self.widgets.txt_search_tz.get_text().as_str().len() > 0 {
-                    self.widgets.cmb_tz_name.popup();
-                }
+                // self.model.local_relm.stream().emit(Msg::LocalTimezoneSelect);
             },
             DrawIllumination => {
                 self.draw_daytime_background();
@@ -408,9 +400,9 @@ impl Update for TzSelector {
                 }
 
                 self.model.this_timezone = Some(tz_string.clone());
+                self.widgets.cmb_tz_name_entry.set_text(&tz_string);
                 self.update_time_labels();
                 self.update_time_display();
-                self.widgets.txt_search_tz.set_text("");
                 //Caught by parent win update loop
                 self.model.local_relm.stream().emit(Msg::NotifyParentTimezoneSelectChanged(self.model.index, tz_string.clone()));
                 if self.model.index == 0 {
@@ -504,40 +496,61 @@ impl Widget for TzSelector {
         let cmb_tz_name: ComboBox = builder_widget.get_object("cmb_tz_name").expect("Could not get cmb_tz_name");
         let tz_scale_adj: Adjustment = builder_widget.get_object("tz_scale_adj").expect("Could not get tz_scale_adj");
         let lbl_current_select_time: Label = builder_widget.get_object("lbl_current_select_time").expect("Could not get lbl_current_select_time");
-        let txt_search_tz: SearchEntry = builder_widget.get_object("txt_search_tz").expect("Could not get txt_search_tz");
         let pb_remove_tz: Button = builder_widget.get_object("pb_remove_tz").expect("Could not get pb_remove_tz");
         let draw_illum: DrawingArea = builder_widget.get_object("draw_illum").expect("Could not get draw_illum");
+        let cmb_tz_name_entry: Entry = builder_widget.get_object("cmb_tz_name_entry").expect("Could not get combo entry cmb_tz_name_entry");
+        // let cmb_tz_name_entrycompletion: EntryCompletion = builder_widget.get_object("cmb_tz_name_entrycompletion").expect("Could not get entry completion cmb_tz_name_entrycompletion");
+        let cmb_tz_name_entrycompletion: EntryCompletion = EntryCompletion::new();
+        cmb_tz_name_entrycompletion.set_text_column(0);
+        cmb_tz_name_entrycompletion.set_minimum_key_length(1);
+        cmb_tz_name_entrycompletion.set_popup_completion(true);
 
         connect!(relm, cmb_tz_name, connect_changed(_), Msg::LocalTimezoneSelect);
         connect!(relm, slider, connect_change_value(_, _, val), return (Some(Msg::LocalTimeSelect(val)), Inhibit(false)));
-        connect!(relm, txt_search_tz, connect_search_changed(_), Msg::SearchContentsChange);
-        connect!(relm, txt_search_tz, connect_key_release_event(_, key), return (Msg::SearchKeyReleased(key.clone()), Inhibit(false)));
         connect!(relm, pb_remove_tz, connect_clicked(_), Msg::RemoveTz);
-        connect!(relm, txt_search_tz, connect_focus_out_event(_, _), return(Msg::SearchLostFocus, Inhibit(true)));
         connect!(relm, draw_illum, connect_draw(_, _), return(Msg::DrawIllumination, Inhibit(false)));
+        connect!(relm, cmb_tz_name_entrycompletion, connect_match_selected(_, tm, ti), return(Msg::SearchMatchSelected(tm.clone(), ti.clone()), Inhibit(true)));
 
+
+        cmb_tz_name_entry.set_completion(Some(&cmb_tz_name_entrycompletion));
+        cmb_tz_name_entrycompletion.set_model(Some(&model.liststorefilter.clone()));
+        cmb_tz_name_entrycompletion.set_text_column(0);
         cmb_tz_name.set_model(Some(&model.liststorefilter.clone()));
 
-        let clone_search = txt_search_tz.clone();
-        model.liststorefilter.set_visible_func(move |tm: &TreeModel, ti: &TreeIter| {
-            if clone_search.get_text_length() > 0 {
-                
-                let match_chars = clone_search.get_text().to_lowercase();
-
-                match tm.get_value(ti, 0).get::<String>().unwrap() {
-                    Some(str_col_value) => {
-                        if str_col_value.to_lowercase().contains(match_chars.as_str()) {
-                                return true;
-                            } else {
-                                return false;
-                            }
-                    },
-                    None => return true
-                }
-            } else {
-                true
+        cmb_tz_name_entrycompletion.set_match_func(move |ec: &EntryCompletion, the_str: &str, ti: &TreeIter| {
+            let tm = ec.get_model().unwrap();
+            match tm.get_value(ti, 0).get::<String>().unwrap() {
+                Some(str_col_value) => {
+                    if str_col_value.to_lowercase().contains(the_str) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                },
+                None => return true
             }
         });
+
+        // let clone_search = txt_search_tz.clone();
+        // model.liststorefilter.set_visible_func(move |tm: &TreeModel, ti: &TreeIter| {
+        //     if clone_search.get_text_length() > 0 {
+                
+        //         let match_chars = clone_search.get_text().to_lowercase();
+
+        //         match tm.get_value(ti, 0).get::<String>().unwrap() {
+        //             Some(str_col_value) => {
+        //                 if str_col_value.to_lowercase().contains(match_chars.as_str()) {
+        //                         return true;
+        //                     } else {
+        //                         return false;
+        //                     }
+        //             },
+        //             None => return true
+        //         }
+        //     } else {
+        //         true
+        //     }
+        // });
 
         //The component is loaded inside of a window, need to remove this link
         box_root.unparent();
@@ -551,9 +564,10 @@ impl Widget for TzSelector {
             cmb_tz_name,
             tz_scale_adj,
             lbl_current_select_time,
-            txt_search_tz,
             pb_remove_tz,
             draw_illum,
+            cmb_tz_name_entrycompletion,
+            cmb_tz_name_entry,
         };
 
         TzSelector {
@@ -563,7 +577,6 @@ impl Widget for TzSelector {
     }
 
     fn init_view(&mut self) {
-        self.widgets.txt_search_tz.set_property_width_request(20);
         if self.model.index == 0 {
             self.widgets.pb_remove_tz.set_sensitive(false);
             self.widgets.pb_remove_tz.set_visible(false);
