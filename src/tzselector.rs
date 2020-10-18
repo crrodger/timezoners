@@ -166,6 +166,7 @@ impl TzSelector {
     }
     
     fn draw_daytime_background(&mut self) {
+        
         let ctx = self.model.draw_handler.get_context();
         let mut curr_start_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
         let mut base_tz: &str = "";
