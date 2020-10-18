@@ -120,36 +120,40 @@ impl TzSelector {
 
     fn setup_cmb_liststore(&self) {
         let mut new_cell = CellRendererTextBuilder::new();
-        new_cell = new_cell.max_width_chars(25);
+        // new_cell = new_cell.max_width_chars(25);
         new_cell = new_cell.ellipsize_set(true);
+        new_cell = new_cell.wrap_width(1);
+        // new_cell = new_cell.
         // new_cell = new_cell.size(20);
 
         let cell = new_cell.build();
-        cell.set_fixed_size(30, -1);
+        // cell.set_fixed_size(30, -1);
+        cell.set_alignment(0.0, 0.0);
+        cell.set_padding(0, 0);
         self.widgets.cmb_tz_name.pack_start(&cell, true);
-        self.widgets.cmb_tz_name.add_attribute(&cell, "text", 0);
+        // self.widgets.cmb_tz_name.add_attribute(&cell, "text", 0);
         self.widgets.cmb_tz_name.set_id_column(0);
         
     }
 
     fn add_timezone_strings(&self) {
         for tz_name in TZ_VARIANTS.iter() {
-            // println!("Item {}", tz_name.name());
             self.add_data_row(&tz_name.name());
         }
     }
 
-    fn add_data_row(&self, col1: &str) {
+    fn add_data_row(&self, col0: &str) {
         let row = self.model.liststore.append();
 
-        self.model.liststore.set_value(&row, 0, &col1.to_value());
+        self.model.liststore.set_value(&row, 0, &col0.to_value());
     }
 
     fn add_text_column(&self, title: &str, column: i32) {
         let mut new_column = TreeViewColumnBuilder::new();
-        new_column = new_column.resizable(true);
+        new_column = new_column.resizable(false);
         new_column = new_column.reorderable(true);
         new_column = new_column.title(title);
+        new_column = new_column.alignment(0.0);
 
         let new_cell = CellRendererTextBuilder::new();
         
@@ -455,7 +459,7 @@ impl Update for TzSelector {
         let midday_colour = param.4;
         let workday_colour = param.5;
         let liststore = ListStore::new(&[
-            Type::String,
+            Type::String
         ]);
         
         let liststorefilter = TreeModelFilter::new(&liststore, None); //Probably need a TreePath for a tree not a list like I am using here
@@ -502,7 +506,7 @@ impl Widget for TzSelector {
         // let cmb_tz_name_entrycompletion: EntryCompletion = builder_widget.get_object("cmb_tz_name_entrycompletion").expect("Could not get entry completion cmb_tz_name_entrycompletion");
         let cmb_tz_name_entrycompletion: EntryCompletion = EntryCompletion::new();
         cmb_tz_name_entrycompletion.set_text_column(0);
-        cmb_tz_name_entrycompletion.set_minimum_key_length(1);
+        cmb_tz_name_entrycompletion.set_minimum_key_length(3);
         cmb_tz_name_entrycompletion.set_popup_completion(true);
 
         connect!(relm, cmb_tz_name, connect_changed(_), Msg::LocalTimezoneSelect);
@@ -531,27 +535,6 @@ impl Widget for TzSelector {
             }
         });
 
-        // let clone_search = txt_search_tz.clone();
-        // model.liststorefilter.set_visible_func(move |tm: &TreeModel, ti: &TreeIter| {
-        //     if clone_search.get_text_length() > 0 {
-                
-        //         let match_chars = clone_search.get_text().to_lowercase();
-
-        //         match tm.get_value(ti, 0).get::<String>().unwrap() {
-        //             Some(str_col_value) => {
-        //                 if str_col_value.to_lowercase().contains(match_chars.as_str()) {
-        //                         return true;
-        //                     } else {
-        //                         return false;
-        //                     }
-        //             },
-        //             None => return true
-        //         }
-        //     } else {
-        //         true
-        //     }
-        // });
-
         //The component is loaded inside of a window, need to remove this link
         box_root.unparent();
         slider.set_adjustment(&tz_scale_adj);
@@ -577,6 +560,7 @@ impl Widget for TzSelector {
     }
 
     fn init_view(&mut self) {
+        // self.widgets.cmb_tz_name.set_popup_fixed_width(true);
         if self.model.index == 0 {
             self.widgets.pb_remove_tz.set_sensitive(false);
             self.widgets.pb_remove_tz.set_visible(false);
@@ -584,7 +568,7 @@ impl Widget for TzSelector {
         self.setup_cmb_liststore();
         self.add_timezone_strings();
         self.model.draw_handler.init(&self.widgets.draw_illum);
-        self.widgets.cmb_tz_name.set_popup_fixed_width(true);
+        self.widgets.cmb_tz_name.set_entry_text_column(0);
 
         match self.model.this_timezone.clone() {
             Some(tz_string) => {

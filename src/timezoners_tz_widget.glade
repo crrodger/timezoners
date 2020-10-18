@@ -31,7 +31,8 @@
                 <property name="halign">baseline</property>
                 <property name="hexpand">False</property>
                 <property name="has-entry">True</property>
-                <property name="id-column">1</property>
+                <property name="popup-fixed-width">False</property>
+                <property name="id-column">0</property>
                 <child internal-child="entry">
                   <object class="GtkEntry" id="cmb_tz_name_entry">
                     <property name="visible">True</property>
