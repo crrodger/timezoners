@@ -344,11 +344,12 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
     return ret_string;
 }
 
-fn get_index_from_time_string(this_tz: Option<String>, base_tz: String, for_date: NaiveDate, curr_start_time: DateTime<Tz>, ref_time: &str) -> f64 {
-    let (a,b,c,d) = get_current_timezone_range(base_tz, this_tz, for_date);
+//Calculate the slider offset for a reference time and current component timezone
+fn get_index_from_time_string(this_tz: Option<String>, base_tz: String, for_date: NaiveDate, ref_time: &str) -> f64 {
+    let (curr_tz_start_time,_b,_c,_d) = get_current_timezone_range(base_tz, this_tz, for_date);
     
     let mut curr_offset: f64 = 0.0;
-    if let Some(curr_start_time_tz) = a {
+    if let Some(curr_start_time_tz) = curr_tz_start_time {
         if let Ok(time_parsed) = NaiveTime::parse_from_str(ref_time, "%H:%M") {
             
             let rem = time_parsed.minute() % 15;
@@ -363,6 +364,7 @@ fn get_index_from_time_string(this_tz: Option<String>, base_tz: String, for_date
     return curr_offset;
 }
 
+// Calculate slider offset for midday of current timezone
 fn calc_offset_for_midday(curr_start_time_tz: DateTime<Tz>) -> f64 {
     return  calc_offset_for_time(curr_start_time_tz, 12, 0, 0) as f64;
 }
@@ -378,6 +380,7 @@ fn calc_day_percent_complete(curr_start_time_tz: DateTime<Tz>) -> f64 {
     return offset;
 }
 
+//Calculate slider offset for current timezone and a reference time
 fn calc_offset_for_time(curr_start_time_tz: DateTime<Tz>, hour:u32, minute:u32, sec:u32) -> f64 {
     let ref_time = NaiveTime::from_hms(hour, minute, sec);
     let nv_curr = NaiveTime::from_hms(curr_start_time_tz.hour(), curr_start_time_tz.minute(), curr_start_time_tz.second());
@@ -447,14 +450,10 @@ impl Update for TzSelector {
                 if time_val.len() != 5 {
                     return;
                 }
-                println!("Time entered {}", time_val);
-
-                let (curr_time_start,curr_time_end,_,_) = get_current_timezone_range(self.model.base_timezone.clone().unwrap(), self.model.this_timezone.clone(), self.model.for_date);
-                if let Some(curr_time_start) = curr_time_start {
-                    let curr_offset = get_index_from_time_string(self.model.this_timezone.clone(), self.model.base_timezone.clone().unwrap(), self.model.for_date, curr_time_start, &time_val);
-                    self.widgets.slider.set_value(curr_offset);
-                    self.model.local_relm.stream().emit(Msg::NotifyParentTimeSelectChanged(curr_offset));
-                }
+                
+                let curr_offset = get_index_from_time_string(self.model.this_timezone.clone(), self.model.base_timezone.clone().unwrap(), self.model.for_date,  &time_val);
+                self.widgets.slider.set_value(curr_offset);
+                self.model.local_relm.stream().emit(Msg::NotifyParentTimeSelectChanged(curr_offset));
                 
                 self.widgets.txt_time_entry.set_text("");
 
