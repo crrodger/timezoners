@@ -18,6 +18,7 @@ pub enum Msg {
     LocalTimezoneSelect,
     NotifyParentTimezoneSelectChanged(i32, String),
     LocalTimeSelect(f64),
+    TimeEntryChanged,
     NotifyParentTimeSelectChanged(f64),
     NotifyParentBaseTzChanged(String),
     NotifyParentTzSelectorRemoveClicked(i32),
@@ -51,6 +52,7 @@ pub struct TzSelectorWidgets {
     pub draw_illum: DrawingArea,
     pub cmb_tz_name_entrycompletion: EntryCompletion,
     pub cmb_tz_name_entry: Entry,
+    pub txt_time_entry: Entry,
 }
 
 
@@ -302,6 +304,7 @@ fn get_current_timezone_range(base_tz: String, this_tz: Option<String>, for_date
     return(Some(curr_start_time_tz), Some(curr_end_time_tz), Some(b_start), Some(b_end));
 }
 
+//Time range of the 'root' or main timezone entry
 fn get_base_timezone_range(base_tz: String, for_date: NaiveDate) -> (DateTime<Tz>, DateTime<Tz>) {
     
     let tz_base: Tz = base_tz.parse().unwrap();
@@ -313,6 +316,7 @@ fn get_base_timezone_range(base_tz: String, for_date: NaiveDate) -> (DateTime<Tz
     return (base_start_time_tz, base_end_time_tz);
 }
 
+//From the slider index (0-96) calculate the time string for the current slider position
 fn get_time_string_from_index(value: f64, start_time: &str) ->String {
     let (starting_time, prev_day) = if start_time.contains("*") {
         (NaiveTime::parse_from_str(&start_time[2..], "%I:%M %P").unwrap(), true)
@@ -338,6 +342,25 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
 
     // let ret_string = String::from(format!("{}", calc_time.format("%I:%M %P")));
     return ret_string;
+}
+
+fn get_index_from_time_string(this_tz: Option<String>, base_tz: String, for_date: NaiveDate, curr_start_time: DateTime<Tz>, ref_time: &str) -> f64 {
+    let (a,b,c,d) = get_current_timezone_range(base_tz, this_tz, for_date);
+    
+    let mut curr_offset: f64 = 0.0;
+    if let Some(curr_start_time_tz) = a {
+        if let Ok(time_parsed) = NaiveTime::parse_from_str(ref_time, "%H:%M") {
+            
+            let rem = time_parsed.minute() % 15;
+            let mut base = time_parsed.minute() / 15;
+            if (rem as f64)/15.0 > 0.5 {
+                base += 1
+            };
+            curr_offset = calc_offset_for_time(curr_start_time_tz, time_parsed.hour(), base*15 , 0) * 96.0;
+            
+        }
+    }
+    return curr_offset;
 }
 
 fn calc_offset_for_midday(curr_start_time_tz: DateTime<Tz>) -> f64 {
@@ -417,6 +440,24 @@ impl Update for TzSelector {
             LocalTimeSelect(value) => {
                 self.model.local_relm.stream().emit(Msg::NotifyParentTimeSelectChanged(value.round()));
                 self.update_time_display();
+            },
+            TimeEntryChanged => {
+                
+                let time_val = self.widgets.txt_time_entry.get_text().to_string();
+                if time_val.len() != 5 {
+                    return;
+                }
+                println!("Time entered {}", time_val);
+
+                let (curr_time_start,curr_time_end,_,_) = get_current_timezone_range(self.model.base_timezone.clone().unwrap(), self.model.this_timezone.clone(), self.model.for_date);
+                if let Some(curr_time_start) = curr_time_start {
+                    let curr_offset = get_index_from_time_string(self.model.this_timezone.clone(), self.model.base_timezone.clone().unwrap(), self.model.for_date, curr_time_start, &time_val);
+                    self.widgets.slider.set_value(curr_offset);
+                    self.model.local_relm.stream().emit(Msg::NotifyParentTimeSelectChanged(curr_offset));
+                }
+                
+                self.widgets.txt_time_entry.set_text("");
+
             },
             NotifyParentTimezoneSelectChanged(_index, _new_zone) => {
                 // Dummy, message is intercepted at win but have to complete match arms here
@@ -504,6 +545,7 @@ impl Widget for TzSelector {
         let pb_remove_tz: Button = builder_widget.get_object("pb_remove_tz").expect("Could not get pb_remove_tz");
         let draw_illum: DrawingArea = builder_widget.get_object("draw_illum").expect("Could not get draw_illum");
         let cmb_tz_name_entry: Entry = builder_widget.get_object("cmb_tz_name_entry").expect("Could not get combo entry cmb_tz_name_entry");
+        let txt_time_entry: Entry = builder_widget.get_object("txt_entertime").expect("Could not get entry txt_entertime");
         // let cmb_tz_name_entrycompletion: EntryCompletion = builder_widget.get_object("cmb_tz_name_entrycompletion").expect("Could not get entry completion cmb_tz_name_entrycompletion");
         let cmb_tz_name_entrycompletion: EntryCompletion = EntryCompletion::new();
         cmb_tz_name_entrycompletion.set_text_column(0);
@@ -515,7 +557,7 @@ impl Widget for TzSelector {
         connect!(relm, pb_remove_tz, connect_clicked(_), Msg::RemoveTz);
         connect!(relm, draw_illum, connect_draw(_, _), return(Msg::DrawIllumination, Inhibit(false)));
         connect!(relm, cmb_tz_name_entrycompletion, connect_match_selected(_, tm, ti), return(Msg::SearchMatchSelected(tm.clone(), ti.clone()), Inhibit(true)));
-
+        connect!(relm, txt_time_entry, connect_key_release_event(_, _), return(Msg::TimeEntryChanged, Inhibit(false)));
 
         cmb_tz_name_entry.set_completion(Some(&cmb_tz_name_entrycompletion));
         cmb_tz_name_entrycompletion.set_model(Some(&model.liststorefilter.clone()));
@@ -552,6 +594,7 @@ impl Widget for TzSelector {
             draw_illum,
             cmb_tz_name_entrycompletion,
             cmb_tz_name_entry,
+            txt_time_entry,
         };
 
         TzSelector {
