@@ -89,8 +89,6 @@ impl TzSelector {
                     curr_end_time_tz = end_tz;
                 }
 
-                // println!("Start time {} / End time {}", curr_start_time_tz, curr_end_time_tz);
-
                 if let Some(b) = start_same_date {
                     if b {
                         self.widgets.lbl_start.set_text(format!("{}", curr_start_time_tz.format("%I:%M %P")).as_ref());
@@ -122,18 +120,16 @@ impl TzSelector {
 
     fn setup_cmb_liststore(&self) {
         let mut new_cell = CellRendererTextBuilder::new();
-        // new_cell = new_cell.max_width_chars(25);
+        
         new_cell = new_cell.ellipsize_set(true);
         new_cell = new_cell.wrap_width(1);
-        // new_cell = new_cell.
-        // new_cell = new_cell.size(20);
-
+        
         let cell = new_cell.build();
-        // cell.set_fixed_size(30, -1);
+        
         cell.set_alignment(0.0, 0.0);
         cell.set_padding(0, 0);
         self.widgets.cmb_tz_name.pack_start(&cell, true);
-        // self.widgets.cmb_tz_name.add_attribute(&cell, "text", 0);
+        
         self.widgets.cmb_tz_name.set_id_column(0);
         
     }
@@ -159,7 +155,6 @@ impl TzSelector {
 
         let new_cell = CellRendererTextBuilder::new();
         
-        // let view_column = TreeViewColumn::new();
         let view_column = new_column.build();
         let cell = new_cell.build();
         view_column.pack_start(&cell, true);
@@ -172,7 +167,6 @@ impl TzSelector {
         let ctx = self.model.draw_handler.get_context();
         let mut curr_start_time_tz: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
         let mut base_tz: &str = "";
-        // println!("Draw background Base Tz {}, Curr Tz {}", opt_base_tz.clone().unwrap(), opt_this_tz.clone().unwrap());
         
         let (x, y, w, h) = ctx.clip_extents();
     
@@ -194,24 +188,9 @@ impl TzSelector {
             curr_start_time_tz = start_tz;
         }
     
-        // let offset = calc_offset_for_midday(curr_start_time_tz);
         let day_start = calc_offset_for_time(curr_start_time_tz, 8, 0, 0);
         let day_end = calc_offset_for_time(curr_start_time_tz, 17, 0, 0);
        
-        
-        // let gr_day = LinearGradient::new(x, y, w, h);
-        // gr_day.add_color_stop_rgba(offset - 1.0, 0.98, 0.86, 0.12, 0.5);
-        // gr_day.add_color_stop_rgba(offset - 0.5, 0.2, 0.2, 0.2, 0.5);
-        // gr_day.add_color_stop_rgba(offset,  0.98, 0.86, 0.12, 0.5);
-        // gr_day.add_color_stop_rgba(offset + 0.5, 0.2, 0.2, 0.2, 0.5);
-        // gr_day.add_color_stop_rgba(offset + 1.0,  0.98, 0.86, 0.12, 0.5);
-    
-
-        //Gold/yellow 0.98, 0.86, 0.12, 0.5
-        //Dark gray 0.2, 0.2, 0.2, 0.5
-        //Light gray 0.94, 0.94, 0.94, 0.5
-        //Light blue 66.0/255.0, 239.0/255.0, 245.0/255.0, 0.8
-        
         // Create gradient twice the width of the output area and then copy  subset from it
         let gr_two_day = LinearGradient::new(x, y, w*2.0, h);
         gr_two_day.add_color_stop_rgba(0.0, 0.2, 0.2, 0.2, 0.3);
@@ -230,8 +209,8 @@ impl TzSelector {
         let mut mtx = Matrix::identity();
         // Translation is the number of pixels we need to shift the source image to
         // get it into the state we want to display. Therefore shift the source left (which is analogous
-        //to shifting the target right i.e. positive)
-        //It is done as a percentage of the source image but because w is dest and s is 2/d we
+        // to shifting the target right i.e. positive)
+        // It is done as a percentage of the source image but because w is dest and s is 2/d we
         // dont need to divide by 2 then multiply by 2
         // translate(tx_index * ( w * 2 / 2))
         mtx.translate(tx_index * w, 0.0);
@@ -240,17 +219,9 @@ impl TzSelector {
         ctx.set_source_rgba(1.0, 0.2, 0.2, 1.0);
         ctx.set_line_width(3.0);
 
-        // unsafe {
-            // ctx.set_source(&Pattern::from_raw_none(gr_day.to_raw_none()));
-            // ctx.set_source(&gr_day);
-        // };
-
-
         ctx.set_source(&gr_two_day);
         ctx.paint();
 
-
-        // ctx.set_source_rgba(0.0, 0.9, 0.2, 0.7);
         ctx.set_source_rgba(self.model.workday_colour.0, 
                             self.model.workday_colour.1, 
                             self.model.workday_colour.2, 
@@ -263,7 +234,6 @@ impl TzSelector {
         }
 
         ctx.stroke();
-        // ctx.fill();
         
     }
 }
@@ -311,8 +281,6 @@ fn get_base_timezone_range(base_tz: String, for_date: NaiveDate) -> (DateTime<Tz
     let base_start_time_tz = tz_base.ymd(for_date.year(), for_date.month(), for_date.day()).and_hms(0, 0, 0);
     let base_end_time_tz = tz_base.ymd(for_date.year(), for_date.month(), for_date.day()).and_hms(23, 59, 59);
     
-    // println!("{}",base_start_time_tz);
-
     return (base_start_time_tz, base_end_time_tz);
 }
 
@@ -323,7 +291,7 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
     } else {
         (NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap(), false)
     };
-    // let starting_time: NaiveTime = NaiveTime::parse_from_str(start_time, "%I:%M %P").unwrap();
+    
     let offset_dur: Duration = Duration::minutes(value as i64 * 15);
     let calc_time: NaiveTime = starting_time + offset_dur;
     
@@ -340,7 +308,6 @@ fn get_time_string_from_index(value: f64, start_time: &str) ->String {
         
     };
 
-    // let ret_string = String::from(format!("{}", calc_time.format("%I:%M %P")));
     return ret_string;
 }
 
@@ -375,8 +342,7 @@ fn calc_day_percent_complete(curr_start_time_tz: DateTime<Tz>) -> f64 {
     let nv_curr = NaiveTime::from_hms(curr_start_time_tz.hour(), curr_start_time_tz.minute(), curr_start_time_tz.second());
     
     let offset = 1.0 - (full_day - nv_curr).num_minutes() as f64 / (24.0 * 60.0);
-    // println!("Full day {} Day start {}, offset {}",full_day,  nv_curr, offset);
-
+    
     return offset;
 }
 
@@ -391,8 +357,7 @@ fn calc_offset_for_time(curr_start_time_tz: DateTime<Tz>, hour:u32, minute:u32, 
     }
     
     let index = ((offset as f64) / 15.0) / 96.0;
-    // println!("Index {} Minutes Diff {} Hours Diff {}", index, offset, offset / 60);
-
+    
     return index as f64;
 }
 
@@ -411,7 +376,6 @@ impl Update for TzSelector {
                     },
                     None => ()
                 }
-                // self.model.local_relm.stream().emit(Msg::LocalTimezoneSelect);
             },
             DrawIllumination => {
                 self.draw_daytime_background();
@@ -468,12 +432,11 @@ impl Update for TzSelector {
                 // Dummy, message is intercepted at win but have to complete match arms here
             },
             FromParentBaseTimezoneChanged(new_zone) => {
-                // println!("Base tz change to {}", new_zone);
                 self.model.base_timezone = new_zone;
                 self.update_time_labels();
                 self.update_time_display();
             },
-            // Should only be recieved by non base timezone Tz Controls
+            // Should only be received by non base timezone Tz Controls
             FromParentBaseTimeSelectChanged(new_time) => {
                 self.widgets.slider.set_value(new_time);
                 self.update_time_display();
@@ -603,7 +566,7 @@ impl Widget for TzSelector {
     }
 
     fn init_view(&mut self) {
-        // self.widgets.cmb_tz_name.set_popup_fixed_width(true);
+        //First timezone widget cannto be removed
         if self.model.index == 0 {
             self.widgets.pb_remove_tz.set_sensitive(false);
             self.widgets.pb_remove_tz.set_visible(false);
