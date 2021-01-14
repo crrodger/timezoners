@@ -47,7 +47,7 @@ impl Update for Win {
     fn update(&mut self, event: Msg) {
         use Msg::*;
         match event {
-            // Intended to provide a demo of using async messages - more for use in multi-threaded use
+            // Intended to provide an example of using async messages - more for use in multi-threaded use
             ProcessUpdateMsg((msg_type , msg_str)) => {
                 match msg_type {
                     MsgUpdateType::StatusMessage => {
@@ -115,9 +115,6 @@ impl Update for Win {
             //Messages from child components
             TimezoneSelectChanged(index, new_zone) => {
                 self.model.tz_zones[index as usize] = Some(new_zone);
-                // for i in 0..self.model.tz_ctrls.len() {
-                //     self.model.tz_ctrls[i].emit(crate::tzselector::Msg::FromParentBaseTimezoneChanged(format!("{}", new_zone)));
-                // }
             },
             TimeSelectChanged(new_time) => {
                 for i in 0..self.model.tz_ctrls.len() {
@@ -126,7 +123,6 @@ impl Update for Win {
             },
             TimezoneRemove(remove_index) => {
                 let rem_widget = self.model.tz_ctrls.get(remove_index as usize).unwrap();
-                // println!("{:#?}", rem_widget);
                 self.widgets.tz_box.remove::<Box>(rem_widget.widget());
                 self.model.tz_zones[remove_index as usize] = None;
             },
@@ -203,18 +199,16 @@ impl Widget for Win {
             config.workday_colour.3);
         
         let first_selector = tz_box.add_widget::<TzSelector>((0, base_tz.clone(), base_tz.clone(), model.for_date.clone(), midday_colour, workday_colour));
-        // first_selector.set_index(0);
+        
         connect!(first_selector@crate::tzselector::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
         connect!(first_selector@crate::tzselector::Msg::NotifyParentTimeSelectChanged(new_time), relm, Msg::TimeSelectChanged(new_time));
         connect!(first_selector@crate::tzselector::Msg::NotifyParentBaseTzChanged(ref new_zone), relm, Msg::ChangeBaseTimezone(Some(new_zone.clone())));
         
-        // connect!(second_selector@crate::tzselector::Msg::TimezoneSelectChanged, relm, Msg::TimezoneSelectChanged);
         
         model.tz_ctrls.push(first_selector);
         model.tz_zones.push(base_tz);
         
         connect!(relm, window, connect_delete_event(_, _), return (Some(Msg::Quit), Inhibit(false)));
-        // connect!(relm, window, connect_show(_), Msg::SetupTree);
         connect!(relm, tb_btn_sel_exit, connect_clicked(_), Msg::Quit);
         connect!(relm, tb_btn_add_tz, connect_clicked(_), Msg::AddTzSelector(String::from("")));
         connect!(relm, tb_btn_sel_cal, connect_clicked(_), Msg::SelectDate);
@@ -267,7 +261,6 @@ impl Widget for Win {
         self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("On %Y/%m/%d")).as_ref()));
 
         let style_context = self.widgets.tz_box.get_style_context();
-        // TODO: remove the next line when relm supports css.
         let style = include_bytes!("styling.css");
         let provider = CssProvider::new();
         provider.load_from_data(style).unwrap();

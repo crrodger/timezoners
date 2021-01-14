@@ -5,8 +5,6 @@ authors = ["Craig Rodger"]
 edition = "2018"
 description = "Multiple timezone viewer utility"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 relm = "^0.20.0"
 relm-derive = "^0.20.0"
