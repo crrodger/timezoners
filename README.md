@@ -31,7 +31,7 @@ The application shows 'work hours' in each timezone using the box around the mid
 Building and running the app should be straightforward assuming cargo and rust are installed.
 
 ```bash
-git clone
+git clone <the_repo_url>
 cd timezone-rs
 cargo run
 ```
