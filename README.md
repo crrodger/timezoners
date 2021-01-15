@@ -28,7 +28,19 @@ The application shows 'work hours' in each timezone using the box around the mid
 
 ## Building
 
-Building and running the app should be straightforward assuming cargo and rust are installed.
+Building and running the app should be straightforward assuming cargo, rust and respective Gtk dependencies are installed.
+
+### Dependencies
+
+[Installation - The Cargo Book](https://doc.rust-lang.org/cargo/getting-started/installation.html#installation)
+
+For Gtk dependencies refer to 
+
+* [Gtk-rs documentation](https://gtk-rs.org/)
+
+* [Gtk Installation](https://www.gtk.org/docs/installations/)
+
+
 
 ```bash
 git clone
