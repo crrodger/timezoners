@@ -12,7 +12,7 @@ The UI is straightforward and presents a list of selected timezones. Timezones c
 
 The screenshot below has a base timezone (always the first one) and 6 additional timezones added. You can also select the date for which you want to compare. This is to cater for daylight saving situations when looking at future dates. All 'base' timezone means is that the times shown on the left and right are the midnight to midnight range and all other timezones are aligned to this one.
 
-![](/Users/craig/Library/Application%20Support/marktext/images/2021-01-14-20-56-53-image.png)
+![](./2021-01-14-20-56-53-image.png)
 
 The first timezone is the base against which all other timezones are referenced. In the example image above Canberra is the base timezone and the day begins at 12:00am and ends at 11:59pm. The matching time in US/Pacific (the second on the list) is 5:00am for Canberra at 12:00am.
 
