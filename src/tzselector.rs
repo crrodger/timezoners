@@ -63,6 +63,12 @@ pub struct TzSelector {
 
 impl TzSelector {
 
+    pub fn set_time_to_now(&mut self) {
+        let curr_time: DateTime<Tz> = Local::now().with_timezone(&Tz::UTC);
+        let index = get_index_from_time_string(self.model.this_timezone.clone(), self.model.base_timezone.clone().unwrap(), self.model.for_date,  &curr_time.format("%I:%M %P").to_string());
+        self.model.local_relm.stream().emit(Msg::LocalTimeSelect(index.round()));
+    }
+
     pub fn set_index(&mut self, index: i32) {
         self.model.index = index;
     }

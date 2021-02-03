@@ -299,8 +299,14 @@ impl Win {
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTimeSelectChanged(new_time), self.model.local_relm, Msg::TimeSelectChanged(new_time));
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), self.model.local_relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
+        
+        // if self.model.tz_ctrls.len() == 0 {
+        //     new_selector.widget().set_time_to_now();
+        // }
+
         self.model.tz_ctrls.push(new_selector);
         self.model.tz_zones.push(Some(tz_location));
+        
     }
 
     fn save_config(&mut self) {
