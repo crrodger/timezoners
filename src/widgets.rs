@@ -8,6 +8,7 @@ pub struct MainWidgets {
     pub tb_btn_add_tz: ToolButton,
     pub tb_btn_sel_cal: ToolButton,
     pub tb_btn_sel_col: ToolButton,
+    pub tb_btn_sel_now: ToolButton,
     pub dlg_calendar: Dialog,
     pub cal_date: Calendar,
     pub pb_dlg_cal_ok: Button,

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.38.1 -->
+<!-- Generated with glade 3.39.0 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <object class="GtkDialog" id="dlg_calendar">
@@ -239,6 +239,20 @@
                 <property name="label" translatable="yes">Colour</property>
                 <property name="use-underline">True</property>
                 <property name="stock-id">gtk-page-setup</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="tb_btn_sel_now">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="tooltip-text" translatable="yes">Set base timezone time to now (in that timezone)</property>
+                <property name="label" translatable="yes">Now</property>
+                <property name="use-underline">True</property>
+                <property name="stock-id">gtk-jump-to</property>
               </object>
               <packing>
                 <property name="expand">False</property>

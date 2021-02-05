@@ -133,6 +133,9 @@ impl Update for Win {
                     self.model.tz_ctrls[i].emit(crate::tzselector::Msg::FromParentBaseTimezoneChanged(new_zone.clone()));
                 }
             },
+            SetToNow => {
+                self.model.tz_ctrls[0].emit(crate::tzselector::Msg::FromParentSetToNow);
+            },
         }
     }
     
@@ -173,6 +176,7 @@ impl Widget for Win {
         let tb_btn_add_tz: ToolButton = builder_main.get_object("tb_btn_add_tz").expect("Could not get tb_btn_add_tz");
         let tb_btn_sel_cal: ToolButton = builder_main.get_object("tb_btn_sel_cal").expect("Could not geto tb_btn_sel_cal");
         let tb_btn_sel_col: ToolButton = builder_main.get_object("tb_btn_sel_col").expect("Could not get tool button tb_btn_sel_col");
+        let tb_btn_sel_now: ToolButton = builder_main.get_object("tb_btn_sel_now").expect("Could not get tool button tb_btn_sel_now");
         
         let dlg_calendar: Dialog = builder_main.get_object("dlg_calendar").expect("Could not get dialog dlg_calendar");
         let cal_date: Calendar = builder_main.get_object("cal_date").expect("Could not get cal_date");
@@ -216,6 +220,7 @@ impl Widget for Win {
         connect!(relm, pb_dlg_cal_cancel, connect_clicked(_), Msg::DateCancel);
 
         connect!(relm, tb_btn_sel_col, connect_clicked(_), Msg::SelectColour);
+        connect!(relm, tb_btn_sel_now, connect_clicked(_), Msg::SetToNow);
         connect!(relm, pb_dlg_col_ok, connect_clicked(_), Msg::ColourOkay);
         connect!(relm, pb_dlg_col_cancel, connect_clicked(_), Msg::ColourCancel);
         
@@ -229,6 +234,7 @@ impl Widget for Win {
             tb_btn_add_tz,
             tb_btn_sel_cal,
             tb_btn_sel_col,
+            tb_btn_sel_now,
             dlg_calendar,
             cal_date,
             pb_dlg_cal_ok,
@@ -256,6 +262,7 @@ impl Widget for Win {
                     }
                 }
             }
+            self.model.local_relm.stream().emit(Msg::SetToNow);
         }
 
         self.widgets.tb_btn_sel_cal.set_label(Some(format!("{}", self.model.for_date.format("On %Y/%m/%d")).as_ref()));
@@ -300,10 +307,6 @@ impl Win {
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTzSelectorRemoveClicked(remove_index), self.model.local_relm, Msg::TimezoneRemove(remove_index));
         connect!(new_selector@crate::tzselector::Msg::NotifyParentTimezoneSelectChanged(index, ref new_zone), self.model.local_relm, Msg::TimezoneSelectChanged(index, new_zone.clone()));
         
-        // if self.model.tz_ctrls.len() == 0 {
-        //     new_selector.widget().set_time_to_now();
-        // }
-
         self.model.tz_ctrls.push(new_selector);
         self.model.tz_zones.push(Some(tz_location));
         
