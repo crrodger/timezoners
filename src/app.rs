@@ -23,6 +23,7 @@ pub enum Msg {
     TimezoneRemove(i32),
     //Messages to child widgets
     ChangeBaseTimezone(Option<String>),
+    SetToNow,
 }
 
 pub struct App;
