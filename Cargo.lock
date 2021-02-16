@@ -749,9 +749,9 @@ checksum = "26412eb97c6b088a6997e05f69403a802a92d520de2f8e63c2b65f9e0f47c4e8"
 
 [[package]]
 name = "relm"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6814cb3502d3edb83435a777c27bee4fcce4613a36884a2a1b7ee36df9f1978a"
+checksum = "9146725e1241fb01e2b2dab85e43859d770c527d95e56451a30abda65d189e2c"
 dependencies = [
  "cairo-rs",
  "glib",
@@ -766,14 +766,14 @@ dependencies = [
 
 [[package]]
 name = "relm-derive"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd3820afe557690469806fa09d5bca7cc13db66358eea330fa7db9bc8baf5827"
+checksum = "f8dfad01c044fc443386089bc153b4586199e96ac4d3749f0a85ec3aec88a069"
 dependencies = [
  "lazy_static",
- "proc-macro2 0.4.30",
- "quote 0.6.13",
- "syn 0.15.44",
+ "proc-macro2 1.0.21",
+ "quote 1.0.7",
+ "syn 1.0.41",
 ]
 
 [[package]]
