@@ -8,6 +8,8 @@ description = "Multiple timezone viewer utility"
 [dependencies]
 relm = "^0.21.0"
 relm-derive = "^0.21.0"
+relm-test = "^0.21.0"
+gtk-test = "^0"
 confy = "0.4.0"
 serde = { version = "1.0", features = ["derive"] }
 gdk = "^0.13.2"

@@ -4,6 +4,7 @@
 extern crate relm;
 #[macro_use]
 extern crate relm_derive;
+extern crate relm_test;
 extern crate chrono;
 extern crate chrono_tz;
 extern crate gdk;

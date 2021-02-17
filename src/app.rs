@@ -1,12 +1,12 @@
 use relm::{Widget};
 use crate::win::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MsgUpdateType {
     StatusMessage,
 }
 
-#[derive(Msg)]
+#[derive(Msg, Clone)]
 pub enum Msg {
     ProcessUpdateMsg((MsgUpdateType, String)),
     Quit,

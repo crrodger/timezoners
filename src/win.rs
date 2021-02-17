@@ -1,4 +1,4 @@
-use relm::{Relm, Update, Widget, Channel};
+use relm::{Relm, Update, Widget, Channel, WidgetTest};
 use gtk::prelude::*;
 use gtk::{Window, Builder, Box, 
     ToolButton, Dialog, Button, Calendar, STYLE_PROVIDER_PRIORITY_APPLICATION, CssProvider,
@@ -227,6 +227,7 @@ impl Widget for Win {
         window.show_all();
         window.move_(config.win_pos_x, config.win_pos_y);
         window.resize(config.win_width, config.win_height);
+        window.present();
         
         let widgets = MainWidgets {
             tz_box,
@@ -285,6 +286,20 @@ impl Widget for Win {
     }
 }
 
+impl WidgetTest for Win {
+    type Streams = ();
+
+    fn get_streams(&self) -> Self::Streams {
+    }
+
+    type Widgets = MainWidgets;
+
+    fn get_widgets(&self) -> Self::Widgets {
+        self.widgets.clone()
+    }
+}
+
+
 
 impl Win {
     fn add_tz_selector(&mut self, tz_location: String) {
@@ -326,4 +341,133 @@ impl Win {
         }
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use gtk::{ToolButtonExt, ContainerExt, Box, Entry, Label, LabelExt, EntryExt};
+    use gtk_test::{assert_label, assert_text};
+    use relm_test::{Observer, click, relm_observer_new, relm_observer_wait, enter_key, key_press, key_release};
+    use relm::{Cast};
+    use gdk::keys::constants as key;
+
+    use crate::win::Win;
+
+    #[test]
+    fn main_window_created() {
+        let (_component, _, widgets) = relm::init_test::<Win>(()).expect("init_test failed");
+        let tb_btn_add_tz = &widgets.tb_btn_add_tz;
+        let tb_btn_sel_cal = &widgets.tb_btn_sel_cal;
+        let tb_btn_sel_col = &widgets.tb_btn_sel_col;
+        
+        let today = chrono::Local::now();
+        let today_string = today.format("On %G/%m/%d");
+        
+        assert_label!(tb_btn_add_tz, "Add");
+        assert_label!(tb_btn_sel_cal, today_string);
+        assert_label!(tb_btn_sel_col, "Colour");
+
+    }
+
+    #[test]
+    fn create_tz_selector() {
+        let (component, _, widgets) = relm::init_test::<Win>(()).expect("init_test failed");
+
+        let tb_btn_add_tz = &widgets.tb_btn_add_tz;
+
+        let observer = relm_observer_new!(component, AddTzSelector);
+        
+        click(tb_btn_add_tz);
+        relm_observer_wait!(let AddTzSelector = observer);
+
+        observer.wait();
+
+    }
+
+    #[test]
+    fn enter_times() {
+        let (component, _,  widgets) = relm::init_test::<Win>(()).expect("init_test failed");
+
+        let tz_selector_main = component.widget();
+        let window_box = tz_selector_main.get_children();
+        
+        let main_box = window_box.get(0).unwrap().clone().downcast::<Box>().expect("Could not get the main box");
+        let kids = main_box.get_children();
+        let widgets_box = kids.get(1).unwrap().clone().downcast::<Box>().expect("Could not get widgets box");
+        let kids = widgets_box.get_children();
+        let tz_box = kids.get(0).unwrap().clone().downcast::<Box>().expect("Could not get first tz selector box");
+        let kids = tz_box.get_children();
+        let left_box = kids.get(0).unwrap().clone().downcast::<Box>().expect("Could not get tz selector left box");
+        let right_box = kids.get(1).unwrap().clone().downcast::<Box>().expect("Could not get tz selector right box");
+        
+        let kids = right_box.get_children();
+        let centre_box = kids.get(0).unwrap().clone().downcast::<Box>().expect("Could not get centre box");
+        let kids = centre_box.get_children();
+        let labels_box = kids.get(0).unwrap().clone().downcast::<Box>().expect("Could not get labels box");
+        let kids = labels_box.get_children();
+        // eprintln!("{:#?}", kids);
+        let time_label = kids.get(1).unwrap().clone().downcast::<Label>().expect("Could not get current time label");
+        
+        assert_text!(time_label, "12:00 pm");
+        let kids = left_box.get_children();
+        let time_entry = kids.get(1).unwrap().clone().downcast::<Entry>().expect("Could not get time entry");
+        
+        enter_key(&time_entry, key::KP_1);
+        assert_text!(time_entry, "1");
+        enter_key(&time_entry, key::KP_1);
+        assert_text!(time_entry, "11");
+        key_press(&time_entry, key::Shift_L);
+        key_press(&time_entry, key::colon);
+        key_release(&time_entry, key::Shift_L);
+        assert_text!(time_entry, "11:");
+        enter_key(&time_entry, key::KP_0);
+        assert_text!(time_entry, "11:0");
+        enter_key(&time_entry, key::KP_0);
+        
+        assert_text!(time_label, "11:00 am");
+
+        //Check a time in between 15 minute range
+        enter_key(&time_entry, key::KP_1);
+        assert_text!(time_entry, "1");
+        enter_key(&time_entry, key::KP_1);
+        assert_text!(time_entry, "11");
+        key_press(&time_entry, key::Shift_L);
+        key_press(&time_entry, key::colon);
+        key_release(&time_entry, key::Shift_L);
+        assert_text!(time_entry, "11:");
+        enter_key(&time_entry, key::KP_0);
+        assert_text!(time_entry, "11:0");
+        enter_key(&time_entry, key::KP_6);
+        
+        assert_text!(time_label, "11:00 am");
+
+        //Check a time in between 15 minute range
+        enter_key(&time_entry, key::KP_1);
+        assert_text!(time_entry, "1");
+        enter_key(&time_entry, key::KP_1);
+        assert_text!(time_entry, "11");
+        key_press(&time_entry, key::Shift_L);
+        key_press(&time_entry, key::colon);
+        key_release(&time_entry, key::Shift_L);
+        assert_text!(time_entry, "11:");
+        enter_key(&time_entry, key::KP_0);
+        assert_text!(time_entry, "11:0");
+        enter_key(&time_entry, key::KP_9);
+        
+        assert_text!(time_label, "11:15 am");
+
+        //Check an invalid time string
+        enter_key(&time_entry, key::A);
+        assert_text!(time_entry, "a");
+        enter_key(&time_entry, key::KP_1);
+        assert_text!(time_entry, "a1");
+        key_press(&time_entry, key::L);
+        assert_text!(time_entry, "a1l");
+        enter_key(&time_entry, key::space);
+        assert_text!(time_entry, "a1l ");
+        enter_key(&time_entry, key::KP_9);
+        
+        assert_text!(time_label, "12:00 am");
+        
+    }
 }
