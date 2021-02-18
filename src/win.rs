@@ -347,7 +347,7 @@ impl Win {
 mod tests {
     use gtk::{ToolButtonExt, ContainerExt, Box, Entry, Label, LabelExt, EntryExt};
     use gtk_test::{assert_label, assert_text};
-    use relm_test::{Observer, click, relm_observer_new, relm_observer_wait, enter_key, key_press, key_release};
+    use relm_test::{Observer, click, relm_observer_new, relm_observer_wait, enter_key, key_press, key_release, enter_keys};
     use relm::{Cast};
     use gdk::keys::constants as key;
 
@@ -467,6 +467,48 @@ mod tests {
         assert_text!(time_entry, "a1l ");
         enter_key(&time_entry, key::KP_9);
         
+        assert_text!(time_label, "12:00 am");
+        
+    }
+
+    #[test]
+    fn enter_times_keys() {
+        let (component, _,  widgets) = relm::init_test::<Win>(()).expect("init_test failed");
+
+        let tz_selector_main = component.widget();
+        let window_box = tz_selector_main.get_children();
+        
+        let main_box = window_box.get(0).unwrap().clone().downcast::<Box>().expect("Could not get the main box");
+        let kids = main_box.get_children();
+        let widgets_box = kids.get(1).unwrap().clone().downcast::<Box>().expect("Could not get widgets box");
+        let kids = widgets_box.get_children();
+        let tz_box = kids.get(0).unwrap().clone().downcast::<Box>().expect("Could not get first tz selector box");
+        let kids = tz_box.get_children();
+        let left_box = kids.get(0).unwrap().clone().downcast::<Box>().expect("Could not get tz selector left box");
+        let right_box = kids.get(1).unwrap().clone().downcast::<Box>().expect("Could not get tz selector right box");
+        
+        let kids = right_box.get_children();
+        let centre_box = kids.get(0).unwrap().clone().downcast::<Box>().expect("Could not get centre box");
+        let kids = centre_box.get_children();
+        let labels_box = kids.get(0).unwrap().clone().downcast::<Box>().expect("Could not get labels box");
+        let kids = labels_box.get_children();
+        // eprintln!("{:#?}", kids);
+        let time_label = kids.get(1).unwrap().clone().downcast::<Label>().expect("Could not get current time label");
+        
+        assert_text!(time_label, "12:00 pm");
+        let kids = left_box.get_children();
+        let time_entry = kids.get(1).unwrap().clone().downcast::<Entry>().expect("Could not get time entry");
+        
+        enter_keys(&time_entry, "11:00");
+        assert_text!(time_label, "11:00 am");
+
+        enter_keys(&time_entry, "11:06");
+        assert_text!(time_label, "11:00 am");
+
+        enter_keys(&time_entry, "11:09");
+        assert_text!(time_label, "11:15 am");
+
+        enter_keys(&time_entry, "1a1aa");
         assert_text!(time_label, "12:00 am");
         
     }
