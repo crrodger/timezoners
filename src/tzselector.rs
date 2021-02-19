@@ -334,11 +334,21 @@ fn get_index_from_time_string(this_tz: Option<String>, base_tz: String, for_date
         if let Ok(time_parsed) = NaiveTime::parse_from_str(ref_time, "%H:%M") {
             
             let rem = time_parsed.minute() % 15;
+            let mut hour = time_parsed.hour();
             let mut base = time_parsed.minute() / 15;
             if (rem as f64)/15.0 > 0.5 {
                 base += 1
             };
-            curr_offset = calc_offset_for_time(curr_start_time_tz, time_parsed.hour(), base*15 , 0) * 96.0;
+            if base*15 == 60 {
+                base = 0;
+                if hour < 23 {
+                    hour = hour + 1;
+                } else {
+                    hour = 0;
+                }
+                
+            }
+            curr_offset = calc_offset_for_time(curr_start_time_tz, hour, base*15 , 0) * 96.0;
             
         }
     }

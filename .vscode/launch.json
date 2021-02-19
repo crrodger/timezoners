@@ -8,6 +8,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug executable 'timezoners'",
+            "env": { "RUST_BACKTRACE":"1" },
             "cargo": {
                 "args": [
                     "build",
@@ -39,6 +40,7 @@
                 }
             },
             "args": [],
+            "env": { "RUST_BACKTRACE":"1" },
             "cwd": "${workspaceFolder}"
         }
     ]
