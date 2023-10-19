@@ -40,7 +40,12 @@ For Gtk dependencies refer to
 
 * [Gtk Installation](https://www.gtk.org/docs/installations/)
 
+#### Ubuntu/Debian Dependencies
+```bash
+sudo apt install libglib2.0-dev libpango1.0-dev libgdk-pixbuf2.0-dev libatk1.0-dev libgtk-3-dev
+```
 
+### Run
 
 ```bash
 git clone https://github.com/crrodger/timezoners.git
