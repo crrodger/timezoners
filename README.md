@@ -44,7 +44,7 @@ For Gtk dependencies refer to
 
 ```bash
 git clone https://github.com/crrodger/timezoners.git
-cd timezone-rs
+cd timezoners
 cargo run
 ```
 
